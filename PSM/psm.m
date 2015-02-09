@@ -1,0 +1,1 @@
+function [ offset, numIterations, lastCost ] = psm( offset, new_data, ref, varargin )
