@@ -1,4 +1,4 @@
-function lookupTable = betterLookupTable(data, pixSrch, lidarRange, moveRange, lidarStd, pixRadius)
+function lookupTable_d = lookupTable(data, pixSrch, lidarRange, moveRange, lidarStd, pixRadius)
 
 N = size(data,1);
 
@@ -7,7 +7,7 @@ totalRange = lidarRange + (pixSrch + 1) * pixRadius + moveRange;
 dataP = betterPtToPx(data,pixSrch, lidarRange, moveRange, pixRadius);
 
 maxIdx = ceil(totalRange/pixRadius) * 2;
-lookupTable = zeros(maxIdx,maxIdx);
+lookupTable_d = zeros(maxIdx,maxIdx);
 for idx=1:N
     ctrRow = dataP(idx,1);
     ctrCol = dataP(idx,2);
@@ -21,13 +21,13 @@ for idx=1:N
             %weight = normpdf(dist,0,lidarStd);
             weight = 1;
 
-            lookupTable(row, col) = lookupTable(row,col) + weight;
+            lookupTable_d(row, col) = lookupTable_d(row,col) + weight;
         end
     end
 end
 
 %normalize to actually make it a probablity distribution
 totalSum = sum(sum(lookupTable));
-lookupTable = lookupTable / totalSum;
+lookupTable_d = lookupTable_d / totalSum;
 
 end

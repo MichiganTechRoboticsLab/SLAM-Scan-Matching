@@ -1,4 +1,4 @@
-function dataP = betterPtToPx(data, pixSrch, lidarRange, moveRange, pixRadius)
+function dataP = ptToPx(data, pixSrch, lidarRange, moveRange, pixRadius)
 
 N = size(data,1);
 

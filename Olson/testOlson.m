@@ -34,7 +34,7 @@ R = [cos(offset(3)), -sin(offset(3)); sin(offset(3)) cos(offset(3))];
 scan = map * R;
 scan = scan + repmat(offset(1:2),N,1) + (rand(N,2) * 0.1 - 0.05);
 fprintf('calculating olson...\n');
-T = betterOlson(map, scan, pixSrch, moveRange, lidarStd, pixRadius, lidarRange, ...
+T = olson(map, scan, pixSrch, moveRange, lidarStd, pixRadius, lidarRange, ...
     10, 0.25, 10, 0.25, deg2rad(3), deg2rad(0.5));
 
 T(1)

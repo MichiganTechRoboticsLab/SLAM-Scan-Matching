@@ -28,7 +28,7 @@ figure(1)
 
 for scanIdx=800:10:10000
     %return the first scan
-    scan = GetLidarXY(scanIdx, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex);
+    scan = getLidarXY(scanIdx, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex);
     if isempty(map)
         map = scan;
         continue
@@ -36,7 +36,7 @@ for scanIdx=800:10:10000
     
     fprintf('calculating olson...\n');
     skip = 1;
-    T = betterOlson(map, scan(1:skip:end,:), pixSrch, moveRange, lidarStd, pixRadius, lidarRange, ...
+    T = olson(map, scan(1:skip:end,:), pixSrch, moveRange, lidarStd, pixRadius, lidarRange, ...
         0.5, 0.01, 0.5, 0.01, deg2rad(0.9), deg2rad(0.25));
     
     %T(abs(T(1:2)) < 0.05) = 0;

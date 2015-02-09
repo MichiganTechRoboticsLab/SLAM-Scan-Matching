@@ -20,7 +20,7 @@ for idxX = -5:0.25:5;
         fprintf('testing %d and %d\n', idxX,idxY);
         
         temp = scan + repmat([idxX,idxY],N,1);
-        scanTable = betterLookupTable(temp);
+        scanTable = lookupTable(temp);
         
         prob = sum(sum(scanTable.*mapTable));
         if prob > maxProb

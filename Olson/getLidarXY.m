@@ -1,4 +1,4 @@
-function [pts] = GetLidarXY(nScan, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex)
+function [pts] = getLidarXY(nScan, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex)
 
 %nScanIndex = unique(Lidar_ScanIndex);
 LidarRange = 30;

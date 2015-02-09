@@ -1,7 +1,7 @@
-function T = betterOlson(map, scan, pixSrch, moveRange, lidarStd, pixRadius, lidarRange, xrange, dx, yrange, dy, thetaRange, dTheta)
+function T = olson(map, scan, pixSrch, moveRange, lidarStd, pixRadius, lidarRange, xrange, dx, yrange, dy, thetaRange, dTheta)
 N = size(scan,1);
 
-mapTable = betterLookupTable(map, pixSrch, lidarRange, moveRange, lidarStd, pixRadius);
+mapTable = lookupTable(map, pixSrch, lidarRange, moveRange, lidarStd, pixRadius);
 
 maxProb = 0;
 T = [0 0];
@@ -19,7 +19,7 @@ for theta = [0, -thetaRange/2:dTheta:thetaRange/2]
             prob = 0;
 
             temp = tempTheta + repmat([x,y],N,1);
-            scanLookup = betterPtToPx(temp, pixSrch, lidarRange, moveRange, pixRadius);
+            scanLookup = ptToPx(temp, pixSrch, lidarRange, moveRange, pixRadius);
 
 
             %need to optomize
