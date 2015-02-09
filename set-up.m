@@ -2,7 +2,7 @@ clear
 
 % Set up paths
 wd = pwd;
-addpath( wd, [wd '/GICP'], [wd '/Olsen'], [wd '/PSM'])
+addpath( wd, [wd '/GICP'], [wd '/Olson'], [wd '/PSM'])
 
 % Set up default function
 % GICP = 0
