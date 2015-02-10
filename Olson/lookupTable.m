@@ -4,7 +4,7 @@ N = size(data,1);
 
 totalRange = lidarRange + (pixSrch + 1) * pixRadius + moveRange;
 
-dataP = betterPtToPx(data,pixSrch, lidarRange, moveRange, pixRadius);
+dataP = ptToPx(data,pixSrch, lidarRange, moveRange, pixRadius);
 
 maxIdx = ceil(totalRange/pixRadius) * 2;
 lookupTable_d = zeros(maxIdx,maxIdx);
@@ -27,7 +27,7 @@ for idx=1:N
 end
 
 %normalize to actually make it a probablity distribution
-totalSum = sum(sum(lookupTable));
+totalSum = sum(sum(lookupTable_d));
 lookupTable_d = lookupTable_d / totalSum;
 
 end
