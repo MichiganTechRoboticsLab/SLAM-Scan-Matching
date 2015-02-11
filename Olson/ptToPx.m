@@ -3,14 +3,16 @@ function dataP = ptToPx(data, pixSrch, lidarRange, moveRange, pixRadius)
 N = size(data,1);
 
 %range in meters + extra layer for search pixels
-totalRange = lidarRange + (pixSrch + 1) * pixRadius + moveRange;
+totalRangeX = (max(data(:,1)) - min(data(:,1))) + pixSrch * 2;
+totalRangeY = (max(data(:,2)) - min(data(:,2))) + pixSrch * 2;
 
-maxPt = ones(1,2) * ceil(totalRange/pixRadius);%*pixRadius;
-minPt = -maxPt;
+minX = min(data(:,1)) - pixSrch;
+minY = min(data(:,2)) - pixSrch;
+maxX = max(data(:,1)) + pixSrch;
+maxY = max(data(:,2)) + pixSrch;
 
-dataP = ceil(data/pixRadius);%;*pixRadius;
-dataP = dataP - repmat(minPt,N,1);
+scaledData = [ (totalRangeX + pixRadius )*(data(:,1) - minX)/(maxX - minX) + pixRadius (totalRangeY + pixRadius)*(data(:,2) - minY)/(maxY - minY) + pixRadius];
+dataP = ceil(scaledData / pixRadius);
 
-dataP = ceil(dataP);
 
 end
