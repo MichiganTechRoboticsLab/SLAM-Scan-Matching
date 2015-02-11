@@ -6,11 +6,14 @@ function [ offset, numIterations, lastCost ] = gicp( offset, new_data, ref, vara
     p.addParameter('costThresh', .004, @(x)isnumeric(x));
     p.addParameter('minMatchDist', 2.0, @(x)isnumeric(x));
     p.addParameter('plotIter', false, @(x)islogical(x));
+    p.addParamValue('MSEThreshold',  1e-6, @(x)isnumeric(x));
+
     p.parse(varargin{:})
     
     costThresh = p.Results.costThresh;
     minMatchDist = p.Results.minMatchDist;
     plotIter = p.Results.plotIter;
+    msethresh = p.Results.MSEThreshold;
     
     new_data_c = precomputeCovariance(new_data);
     ref_c = precomputeCovariance(ref);
@@ -42,10 +45,20 @@ function [ offset, numIterations, lastCost ] = gicp( offset, new_data, ref, vara
         
         costFunc = @(x) cost_func(x, match_pairs);
         
-        options = optimset('MaxIter', 10);
+%       [newOffset, newCost] = fminsearch(costFunc, offset , struct('Display', 'final', 'TolFun', msethresh*100, 'TolX',0.1));
+%        [newOffset, newCost] = fminsearch(costFunc, offset , struct('Display', 'final', 'TolFun', msethresh*100));
+       [ newOffset, newCost ] = fminsearch(costFunc, offset);
+
         
-        [ newOffset, newCost ] = fminsearch(costFunc, offset, options);
-        
+        %if isequal(offset, [0 0 0])
+        %    options = optimset('MaxIter', 20);
+        %    offset
+        %    [ newOffset, newCost ] = fminsearch(costFunc, offset, options);
+        %else
+        %    [ newOffset, newCost ] = fminbnd(costFunc, [-1, -1, -1], [1, 1, 1]);
+        %end
+
+
         if abs( lastCost - newCost) < costThresh
             offset = newOffset;
             lastCost = newCost;
