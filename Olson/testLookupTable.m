@@ -11,7 +11,7 @@ theta = rand(50,1)*2*pi;
 map = [r.*cos(theta) r.*sin(theta)];
 scan = map + repmat([4,-1],N,1);
 
-mapTable = betterLookupTable(map);
+mapTable = genLookupTable(map);
 
 maxProb = 0;
 T = [];
@@ -20,7 +20,7 @@ for idxX = -5:0.25:5;
         fprintf('testing %d and %d\n', idxX,idxY);
         
         temp = scan + repmat([idxX,idxY],N,1);
-        scanTable = lookupTable(temp);
+        scanTable = genLookupTable(temp);
         
         prob = sum(sum(scanTable.*mapTable));
         if prob > maxProb
