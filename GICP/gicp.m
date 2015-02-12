@@ -6,7 +6,7 @@ function [ offset, numIterations, lastCost ] = gicp( offset, new_data, ref, vara
     p.addParameter('costThresh', .004, @(x)isnumeric(x));
     p.addParameter('minMatchDist', 2.0, @(x)isnumeric(x));
     p.addParameter('plotIter', false, @(x)islogical(x));
-    p.addParamValue('MSEThreshold',  1e-6, @(x)isnumeric(x));
+    p.addParameter('MSEThreshold',  1e-6, @(x)isnumeric(x));
 
     p.parse(varargin{:})
     
