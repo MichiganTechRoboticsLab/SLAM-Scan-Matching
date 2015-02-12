@@ -6,7 +6,7 @@ close all
 
 nScanIndex = unique(Lidar_ScanIndex);
 
-lidarRange = 30;
+lidarRange = 2;
 
 map = [];
 pose = [0 0 0];
@@ -16,17 +16,17 @@ figure(1)
 
 T = [0 0 0];
 
-for scanIdx=800:20:10000
+for scanIdx=800:10:10000
     %return the first scan
-    scan = getLidarXY(scanIdx, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex);
+    scan = getLidarXY(scanIdx, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex, 'lidarRange', lidarRange);
     if isempty(map)
         map = scan;
         continue
     end
     
     fprintf('calculating transformation...\n');
-    skip = 10;
-    T = gicp(T, scan(1:skip:end,:), map(1:skip:end,:), 'minMatchDist', 2, 'costThresh', .00001);
+    skip = 2;
+    T = gicp(T, scan(1:skip:end,:), map, 'minMatchDist', 2, 'costThresh', 0.004);
 
     pose = pose + T
     
@@ -44,7 +44,7 @@ for scanIdx=800:20:10000
     hold on
     plot(map(:,1),map(:,2),'r.');
     plot(scan(:,1),scan(:,2),'b.');
-    plot(scan(:,1) + T(1),scan(:,2) + T(2),'g.');
+    plot(temp(:,1),temp(:,2),'g.');
     hold off
     subplot(1,2,2);
     plot(world(:,1),world(:,2),'k.');

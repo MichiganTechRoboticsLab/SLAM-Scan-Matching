@@ -46,17 +46,11 @@ function [ offset, numIterations, lastCost ] = gicp( offset, new_data, ref, vara
         costFunc = @(x) cost_func(x, match_pairs);
         
 %       [newOffset, newCost] = fminsearch(costFunc, offset , struct('Display', 'final', 'TolFun', msethresh*100, 'TolX',0.1));
-%        [newOffset, newCost] = fminsearch(costFunc, offset , struct('Display', 'final', 'TolFun', msethresh*100));
+%       [newOffset, newCost] = fminsearch(costFunc, offset , struct('Display', 'final', 'TolFun', msethresh*100));
        [ newOffset, newCost ] = fminsearch(costFunc, offset);
 
-        
-        %if isequal(offset, [0 0 0])
-        %    options = optimset('MaxIter', 20);
-        %    offset
-        %    [ newOffset, newCost ] = fminsearch(costFunc, offset, options);
-        %else
-        %    [ newOffset, newCost ] = fminbnd(costFunc, [-1, -1, -1], [1, 1, 1]);
-        %end
+        options = optimset('MaxIter', 20);
+%        [ newOffset, newCost ] = fminsearch(costFunc, offset, options);
 
 
         if abs( lastCost - newCost) < costThresh
