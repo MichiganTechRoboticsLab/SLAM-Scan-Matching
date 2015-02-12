@@ -1,6 +1,6 @@
-
 function adjscan = fillLidarData(scan, lidarRangeZ, lidarRangeTheta)
-	mag = @(a,b) sqrt((a(1) - b(1))^2 + (a(2) - b(2))^2);
+
+    mag = @(a,b) sqrt((a(1) - b(1))^2 + (a(2) - b(2))^2);
     pts = [];
     ptDist = 0.01;
     thresh = 0.05;

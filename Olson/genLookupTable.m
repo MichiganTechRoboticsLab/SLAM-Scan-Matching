@@ -1,5 +1,8 @@
 function [lookupTable_d, totalRangeX, totalRangeY, minX, minY, maxX, maxY] = genLookupTable(data, searchRadius, lidarStd, pixelSize)
     
+    if true
+        data = fillLidarData(data, 30, 270);
+    end
     
     N = size(data,1);
     
@@ -24,7 +27,7 @@ function [lookupTable_d, totalRangeX, totalRangeY, minX, minY, maxX, maxY] = gen
         
         NUM_OF_POINTS = 5000;
         
-        for p = 1:N
+        for p = 1:5:N
             randP = mvnrnd(dataPolar(p,:), simga, NUM_OF_POINTS);
             weights = mvnpdf(randP, dataPolar(p,:), simga);
             [ randC(:,1), randC(:,2) ] = pol2cart(randP(:,1), randP(:,2));
