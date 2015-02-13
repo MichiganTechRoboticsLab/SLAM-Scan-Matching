@@ -34,7 +34,7 @@ T = [0 0];
 %TODO
 %need to make it so that I don't check zero multiple times
 fprintf('OLSON: Find best fit\n')
-fprintf('OLSON: Initail Guess\n')
+fprintf('OLSON: Initial Guess\n')
 fprintf(['\t' repmat('%g\t', 1, size(guess, 2)) '\n'], guess')
 for theta = [0, -thetaRange/2:dTheta:thetaRange/2] + guess(3)
 %for theta = 0
