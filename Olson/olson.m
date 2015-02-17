@@ -13,61 +13,67 @@ p.addParameter('dY',  .01, @(x)isnumeric(x));
 p.addParameter('dTheta',  deg2rad(.25), @(x)isnumeric(x));
 p.parse(varargin{:})
 
-searchRadius = p.Results.searchRadius;
 lidarStd = p.Results.lidarStd;
+searchRadius = p.Results.searchRadius * lidarStd;
 pixelSize = p.Results.pixelSize;
 xRange = p.Results.xRange;
 yRange = p.Results.yRange;
 thetaRange = p.Results.thetaRange;
-dX = p.Results.dX;
-dY = p.Results.dY;
+dX = pixelSize;
+dY = pixelSize;
 dTheta = p.Results.dTheta;
+
+%  [mapP(:,1) mapP(:,2)] = cart2pol(map(:,1),map(:,2));
+%  map(mapP(:,2) > 10, :) = [];
+%  
+%  [scanP(:,1) scanP(:,2)] = cart2pol(scan(:,1),scan(:,2));
+%  scan(scanP(:,2) > 10, :) = [];
+
 
 N = size(scan,1);
 
 fprintf('OLSON: Building LookupTable\n')
 [mapTable, mapRangeX, mapRangeY, mapMinX, mapMinY, mapMaxX, mapMaxY] = genLookupTable(map, searchRadius, lidarStd, pixelSize);
 
-maxProb = 0;
-T = [0 0];
+
+
 
 %TODO
 %need to make it so that I don't check zero multiple times
 fprintf('OLSON: Find best fit\n')
 fprintf('OLSON: Initial Guess\n')
-fprintf(['\t' repmat('%g\t', 1, size(guess, 2)) '\n'], guess')
-for theta = [0, -thetaRange/2:dTheta:thetaRange/2] + guess(3)
-%for theta = 0
+tmp = guess;
+tmp(3) = rad2deg(tmp(3));
+fprintf(['\t' repmat('%g\t', 1, size(tmp, 2)) '\n'], tmp')
+thetas = [0, -thetaRange:dTheta:thetaRange] + guess(3);
+data = zeros(size(thetas,2),4);
+parfor i = 1:size(thetas,2)
+    maxProb = 0;
+    T = [0 0];
+    theta = thetas(i);
     R = [cos(theta), -sin(theta); sin(theta), cos(theta)];
     tempTheta = scan * R;
     
-    for x = [0, -xRange/2:dX:xRange/2]  + guess(1)
-        for y = [0, -yRange/2:dY:yRange] + guess(2)
-%             prob = 0;
+    for x = [0, -xRange:dX:xRange]  + guess(1)
+        for y = [0, -yRange:dY:yRange] + guess(2)
 
             temp = tempTheta + repmat([x,y],N,1);
             scanLookup = ptToPx(temp, pixelSize, mapRangeX, mapRangeY, mapMinX, mapMinY, mapMaxX, mapMaxY);
-%           outOfBounds = scanLookup(scanLookup(:,1) > size(mapTable,1) | scanLookup(:,2) > size(mapTable,2) | scanLookup(:,1) <= 0 | scanLookup(:,2) <= 0, :);
-%             outOfBounds = scanLookup(scanLookup(:,1) <= 0 | scanLookup(:,2) <= 0, :);
-%             if ~isempty(outOfBounds)
-%                outOfBounds
-%                fprintf('Array out of bounds\n')
-%             end
-            scanLookup(scanLookup(:,1) <= 0 | scanLookup(:,2) <= 0 | scanLookup(:,1) > size(mapTable,1) | scanLookup(:,2) > size(mapTable,2), :) = [];
-            scanInd = sub2ind(size(mapTable), scanLookup(:,1), scanLookup(:,2));
+            scanLookup(scanLookup(:,1) <= 0 | scanLookup(:,2) <= 0 | scanLookup(:,1) > size(mapTable,1) | scanLookup(:,2) > size(mapTable,2), :) = []; scanInd = sub2ind(size(mapTable), scanLookup(:,1), scanLookup(:,2));
 
             prob = sum(mapTable(scanInd));
 
             if prob > maxProb
                 maxProb = prob;
-                T = [x y theta];
-                %fprintf('found %d and %d\n',idxX,idxY);
+                
+                data(i,:) = [prob x y theta];
             end
-
-            %fprintf('\n', idxX,idxY);
         end
     end
 end
+
+[p, i] = max(data(:,1));
+T = data(i,2:4);
 
 if abs(xRange/2 * 0.9) <= (T(1))
     warning('nearing edge of x bound, considering resizing');

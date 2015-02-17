@@ -2,6 +2,7 @@ function [lookupTable_d, totalRangeX, totalRangeY, minX, minY, maxX, maxY] = gen
     
     if true
         data = fillLidarData(data, 30, 270);
+        %data = data(1:5:end,:);
     end
     
     N = size(data,1);
@@ -21,9 +22,9 @@ function [lookupTable_d, totalRangeX, totalRangeY, minX, minY, maxX, maxY] = gen
     lookupTable_d = zeros(maxIdx,maxIdy);
     
     
-    if true
+    if false
         [dataPolar(:,1), dataPolar(:,2)] = cart2pol(data(:,1),data(:,2));
-        simga = [deg2rad(.05), lidarStd];
+        simga = [deg2rad(.01), lidarStd];
         
         NUM_OF_POINTS = 5000;
         
