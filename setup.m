@@ -1,5 +1,8 @@
 clear
 
+% Load sensor dataset
+load('../datasets/hallroomvn.mat')
+
 % Set up paths
 wd = pwd;
 addpath( wd, [wd '/GICP'], [wd '/Olson'], [wd '/PSM'], [wd '/util'])

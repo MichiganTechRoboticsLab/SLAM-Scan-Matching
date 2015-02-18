@@ -21,7 +21,7 @@ if useIMUAngle
 
 end
 
-if isempty(figs)
+if ~exist('figs','var')
     figs = [];
 
     figs(1) = figure;
@@ -30,6 +30,11 @@ if isempty(figs)
     switch algo
         case 1
             figs(3) = figure;
+    end
+    
+    for f = figs
+        change_current_figure(f)
+        cla
     end
 end
 
@@ -57,8 +62,14 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         case 0
              T = gicp(init_guess, scan(1:skip:end,:), map(1:skip:end,:), 'minMatchDist', 2, 'costThresh', .00001);
         case 1
-            [ T, lookupTable ] = olson(init_guess, scan(1:skip:end,:), map(1:skip:end,:), 'searchRadius', 2, 'dTheta', deg2rad(.05), ...
-                                       'thetaRange', deg2rad(20), 'xRange', 1,'yRange', 1, 'pixelSize', .03);
+            [ T, lookupTable ] = olson(init_guess, scan(1:skip:end,:), map(1:skip:end,:), ...
+                                       'searchRadius', 2, ...         % 2
+                                       'dTheta', deg2rad(.05), ...    % 0.05
+                                       'thetaRange', deg2rad(20), ... % 20
+                                       'xRange', 1, ...               % 1
+                                       'yRange', 1, ...               % 1
+                                       'pixelSize', .03);             % 0.03
+                                   
             fprintf('OLSON: Final Guess\n')
             T(3) = -T(3);
             tmp = T;
@@ -66,8 +77,8 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             fprintf(['\t' repmat('%g\t', 1, size(tmp, 2)) '\n'], tmp')
             change_current_figure(figs(3));
             cla
+            imagesc(imrotate(lookupTable, 90))
             axis equal
-            imagesc(lookupTable)
     end
     
     % Create Transformation
@@ -122,5 +133,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     
     map = scan;
     
+    
+    drawnow
     pause(.1)
 end
