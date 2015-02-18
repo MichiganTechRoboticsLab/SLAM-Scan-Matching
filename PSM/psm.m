@@ -13,10 +13,10 @@ function [ offset, iter, avg_err ] = psm( offset, new_data, ref, varargin )
     PM_MIN_RANGE = .1;
     LASER_Y = 0;
     PM_FOV = 270;
-    PM_L_POINTS = 1081
+    PM_L_POINTS = 1081;
     PM_WEIGHTING_FACTOR = 70*70;
     PM_CHANGE_WEIGHT_ITER = 10;
-    PM_MAX_ERR = 1
+    PM_MAX_ERR = 1;
     
     PM_RANGE = 1;
     PM_MOVING = 2;
@@ -34,8 +34,8 @@ function [ offset, iter, avg_err ] = psm( offset, new_data, ref, varargin )
     C = PM_WEIGHTING_FACTOR;
     
     %% PSM
-    [ refP(:,1) refP(:,2) ] = cart2pol(ref(:,1), ref(:,2));
-    [ newP(:,1) newP(:,2) ] = cart2pol(new_data(:,1), new_data(:,2));
+    [ refP(:,1), refP(:,2) ] = cart2pol(ref(:,1), ref(:,2));
+    [ newP(:,1), newP(:,2) ] = cart2pol(new_data(:,1), new_data(:,2));
     
     lsr = struct;
     lsn = struct;
@@ -106,13 +106,6 @@ function [ offset, iter, avg_err ] = psm( offset, new_data, ref, varargin )
     
     offset = [ax, ay, ath];
     
-    
-    
-    
-    
-    
-    
-    
     %% Helper Functions
     function [avg_err, dx, dy] = translationEstimation(ref, newR, newBad, C)
         hi1 = 0; hi2 = 0; hwi1 = 0; hwi2 = 0; hw1= 0; hw2 = 0; hwh11 = 0;
@@ -127,8 +120,8 @@ function [ offset, iter, avg_err ] = psm( offset, new_data, ref, varargin )
                 w = C/ (dr*dr + C);
                 n = n + 1;
                 
-                hi1 = cos(ref.data(i,1);
-                hi2 = sin(ref.data(i,1);
+                hi1 = cos(ref.data(i,1));
+                hi2 = sin(ref.data(i,1));
                 
                 hwi1 = hi1*w;
                 hwi2 = hi2*w;
@@ -138,9 +131,20 @@ function [ offset, iter, avg_err ] = psm( offset, new_data, ref, varargin )
                 
                 hwh11 = hwh11 + hwi1*hi1;
                 hwh12 = hwh12 + hwi2*hi2;
+                hwh21 = hwh21 + hwi2*hi1;
+                hwh22 = hwi22 + hwi2*hi2;
                 
             end
         end
+        D = 0;
+        D = hwh11*hwh22-hwh12*hwh21;
+        inv11 = hwh22/D;
+        inv12 = -hwh12/D;
+        inv21 = -hwh12/D;
+        inv22 = hwh11/D;
+        dx = inv11*hw1+inv12*hw2;
+        dy = inv21*hw1+inv22*hw2;
+        avg_err = abs_err/n;
     end
     
     function dth = orientationSearch(ref, newR, newBad)
@@ -180,7 +184,7 @@ function [ offset, iter, avg_err ] = psm( offset, new_data, ref, varargin )
             k = k + 1;
         end
         
-        [emin, imin] = min(err)
+        [~, imin] = min(err);
         dth = beta(imin)*PM_DFI;
         
         if(imin >= 2 && imin < (k-1))
@@ -206,7 +210,7 @@ function [ offset, iter, avg_err ] = psm( offset, new_data, ref, varargin )
         delta = scan.data(:,1) + scan.th;
         x = scan.data(:,2) * cos(delta) + scan.rx;
         y = scan.data(:,2) * sin(delta) + scan.ry;
-        [r fi] = cart2pol(x, y);
+        [r, fi] = cart2pol(x, y);
         fi(x < 0 & y < 0) = fi(x < 0 & y < 0) + 2*pi;
         
         % INTERPOLATION
@@ -259,7 +263,7 @@ function [ offset, iter, avg_err ] = psm( offset, new_data, ref, varargin )
     function [scan] = segmentScan(scan)
         dr = 0;
         segCnt = 1;
-        cnt = 0
+        cnt = 0;
         breakSeg = false;
         
         if( abs( scan.data(1,2) - ls.data(2,2)) < SEG_MAX_DIST )
@@ -304,7 +308,7 @@ function [ offset, iter, avg_err ] = psm( offset, new_data, ref, varargin )
                 else
                     segCnt = segCnt + 1;
                     scan.seg(i) = segCnt;
-                    cnt = 1;`
+                    cnt = 1;
                 end
             end
         end
