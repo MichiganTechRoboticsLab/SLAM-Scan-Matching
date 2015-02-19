@@ -23,28 +23,31 @@ dX = pixelSize;
 dY = pixelSize;
 dTheta = p.Results.dTheta;
 
-%  [mapP(:,1) mapP(:,2)] = cart2pol(map(:,1),map(:,2));
-%  map(mapP(:,2) > 10, :) = [];
-%  
-%  [scanP(:,1) scanP(:,2)] = cart2pol(scan(:,1),scan(:,2));
-%  scan(scanP(:,2) > 10, :) = [];
 
 
 N = size(scan,1);
 
-fprintf('OLSON: Building LookupTable\n')
+% Generate lookup table
+fprintf('OLSON: Building LookupTable... \n')
+lookupTableTic = tic;
+
 [mapTable, mapRangeX, mapRangeY, mapMinX, mapMinY, mapMaxX, mapMaxY] = genLookupTable(map, searchRadius, lidarStd, pixelSize);
 
+fprintf('OLSON: LookupTable generation took %4.1f seconds. \n', toc(lookupTableTic))
 
 
 
-%TODO
-%need to make it so that I don't check zero multiple times
-fprintf('OLSON: Find best fit\n')
+% Center search around initial guess
 fprintf('OLSON: Initial Guess\n')
 tmp = guess;
 tmp(3) = rad2deg(tmp(3));
 fprintf(['\t' repmat('%g\t', 1, size(tmp, 2)) '\n'], tmp')
+
+
+% Exahusive search for best score
+fprintf('OLSON: Searching for Solution... \n')
+searchTic = tic;
+
 thetas = [0, -thetaRange:dTheta:thetaRange] + guess(3);
 data = zeros(size(thetas,2),4);
 parfor i = 1:size(thetas,2)
@@ -72,17 +75,22 @@ parfor i = 1:size(thetas,2)
     end
 end
 
-[p, i] = max(data(:,1));
+[~, i] = max(data(:,1));
 T = data(i,2:4);
 
-if abs(xRange/2 * 0.9) <= (T(1))
-    warning('nearing edge of x bound, considering resizing');
+
+fprintf('OLSON: Search took %4.1f seconds. \n', toc(lookupTableTic))
+
+
+% Misc Warnings
+if abs(xRange * 0.9) <= T(1)
+    warning('OLSON: Nearing edge of x bound, considering resizing');
 end
 
-if abs(yRange/2 * 0.9) <= (T(2))
-    warning('nearing edge of y bound, considering resizing');
+if abs(yRange * 0.9) <= T(2)
+    warning('OLSON: Nearing edge of y bound, considering resizing');
 end
 
-if abs(thetaRange/2 * 0.9) <= (T(3))
-    warning('nearing edge of theta bound, considering resizing');
+if abs(thetaRange * 0.9) <= T(3)
+    warning('OLSON: Nearing edge of theta bound, considering resizing');
 end
