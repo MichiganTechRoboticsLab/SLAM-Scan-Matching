@@ -16,11 +16,8 @@ world = [];
 T = [0 0 0];
 init_guess = [0 0 0];
 usePrevOffsetAsGuess = true;
-useIMUAngle = false;
+useScan2World = false;
 
-if useIMUAngle
-
-end
 
 % Create Figures
 if ~exist('figs','var')
@@ -59,11 +56,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         continue
     end
     
-    %fprintf('calculating transformation...\n');
-    
-    if useIMUAngle
-        
-    end
+
     
     
     % Scan Matching Algo
@@ -78,18 +71,42 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             I = randsample(size(scan,1), min(size(scan,1), 600));
             scan = scan(I,:);
             
+            if useScan2World
+                % Translate current scan to map coordinates
+                dx = pose(1);
+                dy = pose(2);
+                theta = pose(3);
+
+                M = [ cos(theta) -sin(theta) dx;
+                      sin(theta)  cos(theta) dy;
+                              0           0  1];
+
+                scan = [scan(1:skip:end,:) ones(size(scan,1), 1)];
+                scan = scan(1:skip:end,:) * M';
+                scan = scan(:,[1,2]);
+                
+                % extract points around the current scan for a map
+                map = map(map(:,1) > min(scan(:,1)) - 1, :);
+                map = map(map(:,1) < max(scan(:,1)) + 1, :);
+                map = map(map(:,2) > min(scan(:,2)) - 1, :);
+                map = map(map(:,2) < max(scan(:,2)) + 1, :);
+                
+                % Limit number of points in the map
+                I = randsample(size(map,1), min(size(map,1), 2000));
+                map = map(I,:);
+            end
             
             % Low Resolution 
             [ T, lookupTable_l ] = olson(init_guess, scan(1:skip:end,:), map(1:skip:end,:), ... 
                                         'searchRadius', 3,                     ...
                                         'lidarStd', 0.03,                      ...
                                                                                ...
-                                        'thetaRange', deg2rad(17),            ...
+                                        'thetaRange', deg2rad(25),            ...
                                         'dTheta', deg2rad(5), ...
                                                                                ...
                                         'xRange', 0.5,         ...
                                         'yRange', 0.5,         ... 
-                                        'pixelSize', 0.06); 
+                                        'pixelSize', 0.05); 
                                     
 
             % High Resolution
@@ -101,8 +118,8 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
                                         'searchRadius', 3,                     ...
                                         'lidarStd', 0.03,                      ...
                                                                                ...
-                                        'thetaRange', deg2rad(6),            ...
-                                        'dTheta', deg2rad(.25), ...
+                                        'thetaRange', deg2rad(8),            ...
+                                        'dTheta', deg2rad(.1), ...
                                                                                ...
                                         'xRange', 0.1,         ...
                                         'yRange', 0.1,         ... 
@@ -118,17 +135,18 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             
             change_current_figure(figs(3));
             cla
-            %imagesc(imrotate(lookupTable_l,90))
-            imagesc(1:size(lookupTable_l,1),1:size(lookupTable_l,2),imrotate(lookupTable_l,90))
+            imagesc(imrotate(lookupTable_l,90))
+            %imagesc(1:size(lookupTable_l,1),1:size(lookupTable_l,2),imrotate(lookupTable_l,90))
             colormap(bone)
             axis equal
             title(['Scan: ' num2str(scanIdx)]);
             
-%             change_current_figure(figs(4));
-%             cla
-%             imagesc(imrotate(lookupTable_h,90))
-%             axis equal
-%             title(['Scan: ' num2str(scanIdx)]);
+            change_current_figure(figs(4));
+            cla
+            imagesc(imrotate(lookupTable_h,90))
+            colormap(bone)
+            axis equal
+            title(['Scan: ' num2str(scanIdx)]);
             
         case 2
             [ T, iter, err] = psm(init_guess, scan(1:skip:end,:), map(1:skip:end,:));
@@ -140,7 +158,11 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     end
     
     % Rotate translation into map frame
-    theta = -pose(3);
+    if useScan2World
+        theta = pose(3);
+    else
+        theta = -pose(3);
+    end
     Trans = [ cos(theta) -sin(theta), 0;
               sin(theta)  cos(theta), 0;
               0           0           1];
@@ -172,7 +194,11 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     tempL = [scan ones(size(scan,1),1)] * LTrans';
     
     % Add transformed data to world
-    world = [world; temp(:,1:2)];
+    if useScan2World
+        world = [world; tempL(:,1:2)];
+    else
+        world = [world; temp(:,1:2)];
+    end
 
     
     
@@ -200,13 +226,15 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     
     if usePrevOffsetAsGuess
         init_guess = T;
-        %init_guess(3) = -T(3);
     end
     
-    map = scan;
     
-    %I = randsample(size(world,1), min(size(world,1), 10000));
-    %map = world(I,:);
+    if useScan2World  
+        map = world;
+    else
+        map = scan;
+    end
+    
     
     
     drawnow
