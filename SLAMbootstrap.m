@@ -3,7 +3,7 @@ clc
 nScanIndex = unique(Lidar_ScanIndex);
 
 numberOfScans = 100000;
-start = 1901;
+start = 1;
 step = 50; % Scans
 stop = start + step * numberOfScans;
 
@@ -15,7 +15,7 @@ path = [];
 world = [];
 T = [0 0 0];
 init_guess = [0 0 0];
-usePrevOffsetAsGuess = false;
+usePrevOffsetAsGuess = true;
 useIMUAngle = false;
 
 if useIMUAngle
@@ -74,36 +74,43 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         case 1
             startOlson = tic;
             
+            scan = fillLidarData(scan(1:skip:end,:), 30, 270);
+            I = randsample(size(scan,1), min(size(scan,1), 600));
+            scan = scan(I,:);
+            
+            
             % Low Resolution 
             [ T, lookupTable_l ] = olson(init_guess, scan(1:skip:end,:), map(1:skip:end,:), ... 
                                         'searchRadius', 3,                     ...
                                         'lidarStd', 0.03,                      ...
                                                                                ...
-                                        'thetaRange', deg2rad(25),            ...
-                                        'dTheta', deg2rad(1), ...
+                                        'thetaRange', deg2rad(17),            ...
+                                        'dTheta', deg2rad(5), ...
                                                                                ...
-                                        'xRange', 1,         ...
-                                        'yRange', 1,         ... 
-                                        'pixelSize', 0.05); 
+                                        'xRange', 0.5,         ...
+                                        'yRange', 0.5,         ... 
+                                        'pixelSize', 0.06); 
                                     
-             
+
             % High Resolution
-%             dRotateRange = deg2rad(5);
-%             dTranslateRange = 0.1;
-%             nSearchSteps = 20;
-%             
-%             [ T, lookupTable_h ] = olson(init_guess, scan(1:skip:end,:), map(1:skip:end,:), ... 
-%                                         'searchRadius', 4,                     ...
-%                                                                                ...
-%                                         'thetaRange', dRotateRange,            ...
-%                                         'dTheta', dRotateRange / nSearchSteps, ...
-%                                                                                ...
-%                                         'xRange', dTranslateRange,             ...
-%                                         'yRange', dTranslateRange,             ...
-%                                         'pixelSize', dTranslateRange/nSearchSteps);
+            dRotateRange = deg2rad(5);
+            dTranslateRange = 0.1;
+            nSearchSteps = 20;
+            
+            [ T, lookupTable_h ] = olson(T, scan(1:skip:end,:), map(1:skip:end,:), ... 
+                                        'searchRadius', 3,                     ...
+                                        'lidarStd', 0.03,                      ...
+                                                                               ...
+                                        'thetaRange', deg2rad(6),            ...
+                                        'dTheta', deg2rad(.25), ...
+                                                                               ...
+                                        'xRange', 0.1,         ...
+                                        'yRange', 0.1,         ... 
+                                        'pixelSize', 0.02);
                                     
 
             toc(startOlson)
+            
             fprintf('OLSON: Final Guess\n')
             tmp = T;
             tmp(3) = rad2deg(tmp(3));
@@ -112,7 +119,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             change_current_figure(figs(3));
             cla
             %imagesc(imrotate(lookupTable_l,90))
-            imagesc(imrotate(lookupTable_l,90))
+            imagesc(1:size(lookupTable_l,1),1:size(lookupTable_l,2),imrotate(lookupTable_l,90))
             colormap(bone)
             axis equal
             title(['Scan: ' num2str(scanIdx)]);
@@ -192,10 +199,14 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     legend('Reference', 'Current Scan', 'Registered Scan')
     
     if usePrevOffsetAsGuess
-        init_guess(3) = -T(3);
+        init_guess = T;
+        %init_guess(3) = -T(3);
     end
     
     map = scan;
+    
+    %I = randsample(size(world,1), min(size(world,1), 10000));
+    %map = world(I,:);
     
     
     drawnow

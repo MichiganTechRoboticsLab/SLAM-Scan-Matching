@@ -7,13 +7,13 @@ function [lookupTable_d, totalRangeX, totalRangeY, minX, minY, maxX, maxY] = gen
     N = size(data,1);
     
     %range in meters + extra layer for search pixels
-    totalRangeX = (max(data(:,1)) - min(data(:,1))) + searchRadius * 2;
-    totalRangeY = (max(data(:,2)) - min(data(:,2))) + searchRadius * 2;
+    totalRangeX = (max(data(:,1)) - min(data(:,1))) + searchRadius * 6 + 1;
+    totalRangeY = (max(data(:,2)) - min(data(:,2))) + searchRadius * 6 + 1;
     
-    minX = min(data(:,1)) - searchRadius;
-    minY = min(data(:,2)) - searchRadius;
-    maxX = max(data(:,1)) + searchRadius;
-    maxY = max(data(:,2)) + searchRadius;
+    minX = min(data(:,1)) - (searchRadius * 3 + 0.5);
+    minY = min(data(:,2)) - (searchRadius * 3 + 0.5);
+    maxX = max(data(:,1)) + (searchRadius * 3 + 0.5);
+    maxY = max(data(:,2)) + (searchRadius * 3 + 0.5);
     
     
     maxIdx = ceil(totalRangeX/pixelSize);
@@ -30,8 +30,8 @@ function [lookupTable_d, totalRangeX, totalRangeY, minX, minY, maxX, maxY] = gen
 
         for ii=-searchRadius:pixelSize:searchRadius
             for jj=-searchRadius:pixelSize:searchRadius
-                row = ctrRow + round(ii/pixelSize);
-                col = ctrCol + round(jj/pixelSize);
+                row = ctrRow + ceil(ii/pixelSize);
+                col = ctrCol + ceil(jj/pixelSize);
 
                 if(row > maxIdx || col > maxIdy)
                     continue
