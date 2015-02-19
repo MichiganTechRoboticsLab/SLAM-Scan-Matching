@@ -1,8 +1,7 @@
 function [lookupTable_d, totalRangeX, totalRangeY, minX, minY, maxX, maxY] = genLookupTable(data, searchRadius, lidarStd, pixelSize)
     
-    if true
+    if false
         data = fillLidarData(data, 30, 270);
-        %data = data(1:5:end,:);
     end
     
     N = size(data,1);
@@ -21,55 +20,34 @@ function [lookupTable_d, totalRangeX, totalRangeY, minX, minY, maxX, maxY] = gen
     maxIdy = ceil(totalRangeY/pixelSize);
     lookupTable_d = zeros(maxIdx,maxIdy);
     
-    
-    if false
-        [dataPolar(:,1), dataPolar(:,2)] = cart2pol(data(:,1),data(:,2));
-        simga = [deg2rad(.01), lidarStd];
-        
-        NUM_OF_POINTS = 5000;
-        
-        for p = 1:5:N
-            randP = mvnrnd(dataPolar(p,:), simga, NUM_OF_POINTS);
-            weights = mvnpdf(randP, dataPolar(p,:), simga);
-            [ randC(:,1), randC(:,2) ] = pol2cart(randP(:,1), randP(:,2));
-            
-            randPx = ptToPx(randC, pixelSize, totalRangeX, totalRangeY, minX, minY, maxX, maxY);
-            removePx = randPx(:,1) <= 0 | randPx(:,2) <= 0 | randPx(:,1) > maxIdx | randPx(:,2) > maxIdy;
-            weights(removePx) = [];
-            randPx(removePx, :) = [];
-            localLookup = accumarray(randPx, weights, [], [], [], true);
-            ind = [];
-            [ ind(:,1), ind(:,2), ind(:,3) ] = find(localLookup);
-            lookupInd = sub2ind(size(lookupTable_d),ind(:,1), ind(:,2));
-            lookupTable_d(lookupInd) = lookupTable_d(lookupInd) + ind(:,3);
-        end
-    else
-        dataP = ptToPx(data, pixelSize, totalRangeX, totalRangeY, minX, minY, maxX, maxY);
-        for idx=1:N
-            ctrRow = dataP(idx,1);
-            ctrCol = dataP(idx,2);
-            
-            for ii=-searchRadius:pixelSize:searchRadius
-                for jj=-searchRadius:pixelSize:searchRadius
-                    row = ctrRow + round(ii/pixelSize);
-                    col = ctrCol + round(jj/pixelSize);
-                    
-                    if(row > maxIdx || col > maxIdy)
-                        continue
-                    end
-                    
-                    
-                    
-                    if(row <= 0 || col <= 0)
-                        continue
-                    end
-                    
-                    dist = sqrt(ii^2 + jj^2);
-                    weight = normpdf(dist,0,lidarStd);
-                    
-                    lookupTable_d(row, col) = lookupTable_d(row,col) + weight;
+    % Max value for any pixel
+    maxPxValue = normpdf(0, 0, lidarStd);
+
+    dataP = ptToPx(data, pixelSize, totalRangeX, totalRangeY, minX, minY, maxX, maxY);
+    for idx=1:N
+        ctrRow = dataP(idx,1);
+        ctrCol = dataP(idx,2);
+
+        for ii=-searchRadius:pixelSize:searchRadius
+            for jj=-searchRadius:pixelSize:searchRadius
+                row = ctrRow + round(ii/pixelSize);
+                col = ctrCol + round(jj/pixelSize);
+
+                if(row > maxIdx || col > maxIdy)
+                    continue
                 end
+
+                if(row <= 0 || col <= 0)
+                    continue
+                end
+
+                dist = sqrt(ii^2 + jj^2);
+                weight = normpdf(dist,0,lidarStd);
+
+                lookupTable_d(row, col) = min(lookupTable_d(row,col) + weight, maxPxValue);
+                %lookupTable_d(row, col) = lookupTable_d(row,col) + weight;
             end
         end
-    end 
+    end
+
 end
