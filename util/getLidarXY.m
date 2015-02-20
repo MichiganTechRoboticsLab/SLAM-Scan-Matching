@@ -17,10 +17,10 @@ I = nIndex == Lidar_ScanIndex;
 a = Lidar_Angles(I,:)';
 z = Lidar_Ranges(I,:)';
 
-%  Remove out of range measurements
-I = (z >= LidarRange*0.9);
-a(I) = [];
-z(I) = [];
+% %  Remove out of range measurements
+% I = (z >= LidarRange*0.9);
+% a(I) = [];
+% z(I) = [];
 
 [x,y] = pol2cart(a,z);
 
