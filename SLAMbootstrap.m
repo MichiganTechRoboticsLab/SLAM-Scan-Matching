@@ -74,7 +74,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             scan = fillLidarData(scan(1:skip:end,:), 270, d);
             
             % Limit number of points in the map
-            I = randsample(size(scan,1), min(size(scan,1), 1200));
+            I = randsample(size(scan,1), min(size(scan,1), 1000));
             scan = scan(I,:);
             
             
@@ -211,7 +211,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     change_current_figure(figs(1));
     cla
     hold on
-    plot(world(:,1), world(:,2), 'k.')
+    plot(world(:,1), world(:,2), 'k.', 'MarkerSize', 1)
     plot(path(:,1), path(:,2), 'r.')
     axis equal
     title(['Scan: ' num2str(scanIdx)]);
