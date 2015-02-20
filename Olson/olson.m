@@ -29,7 +29,7 @@ function [ T, mapTable] = olson(guess, scan, map, varargin)
 
     [mapTable, mapRangeX, mapRangeY, mapMinX, mapMinY, mapMaxX, mapMaxY] = genLookupTable(map, searchRadius, lidarStd, pixelSize);
 
-    fprintf('OLSON: LookupTable generation took %4.1f seconds. \n', toc(lookupTableTic))
+    fprintf('OLSON: LookupTable generation took %.1f seconds. \n', toc(lookupTableTic))
 
 
 
@@ -47,18 +47,27 @@ function [ T, mapTable] = olson(guess, scan, map, varargin)
     X0 = guess(1);
     Y0 = guess(2);
     
+    % Rotation search
     thetas = [0, -thetaRange:dTheta:thetaRange] + guess(3);
+    
+    % Best fit for each theta
     data = zeros(size(thetas,2), 4);
-    parfor i = 1:size(thetas,2)
+    for i = 1:size(thetas,2)
         maxScore = 0;
+        
+        % Rotate the current scan to the search location
         theta = thetas(i);
         R = [cos(theta), -sin(theta); sin(theta), cos(theta)];
         tempTheta = scan * R;
 
+        % Search the translation space
         for x = [0, -xRange:pixelSize:xRange]  + X0
             for y = [0, -yRange:pixelSize:yRange] + Y0
 
+                % Move current scan points to search location
                 temp = tempTheta + repmat([x,y],N,1);
+                
+                % Convert points to pixels
                 scanLookup = ptToPx(temp, pixelSize, mapRangeX, mapRangeY, mapMinX, mapMinY, mapMaxX, mapMaxY);
                 
                 % Remove out of bounds points
@@ -80,6 +89,6 @@ function [ T, mapTable] = olson(guess, scan, map, varargin)
     [~, i] = max(data(:,1));
     T = data(i,2:4);
 
-    fprintf('OLSON: Search took %4.1f seconds. \n', toc(searchTic))
+    fprintf('OLSON: Search took %.1f seconds. \n', toc(searchTic))
 
 
