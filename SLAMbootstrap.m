@@ -46,33 +46,42 @@ pause(0.1);
 % Scan Matching Loop
 startTime = tic;
 for scanIdx = start:step:min(stop,size(nScanIndex,1))
-    fprintf('Scan %d\n',scanIdx);
-    % Get Current Scan
+    
+    % Display current scan index
+    fprintf('Scan %d\n', scanIdx);
+        
+    % Get current scan data
     scan = getLidarXY(scanIdx, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex);
+    
+    % Initialize the map with the first scan
     if isempty(map)
-        % Init map and world
         map = scan;
         world = map;
         continue
     end
-    
-
-    
+        
     
     % Scan Matching Algo
+    ScanMatch = tic;
     switch algo
         case 0
              T = gicp(init_guess, scan(1:skip:end,:), map(1:skip:end,:), 'minMatchDist', 2, 'costThresh', .00001);
              
         case 1
-            scan = fillLidarData(scan(1:skip:end,:), 30, 270);
-            %I = randsample(size(scan,1), min(size(scan,1), 1000));
-            %scan = scan(I,:);
+            % Linear interpolation of conncect points
+            m = min(sqrt(scan(:,1).^2 + scan(:,2).^2));
+            d = m * sin(deg2rad(270/1081));
+            scan = fillLidarData(scan(1:skip:end,:), 270, d);
+            
+            % Limit number of points in the map
+            I = randsample(size(scan,1), min(size(scan,1), 1200));
+            scan = scan(I,:);
+            
             
             if useScan2World
                 % Translate current scan to map coordinates
-                dx = pose(1);
-                dy = pose(2);
+                dx    = pose(1);
+                dy    = pose(2);
                 theta = pose(3);
 
                 M = [ cos(theta) -sin(theta) dx;
@@ -83,11 +92,12 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
                 scan = scan(1:skip:end,:) * M';
                 scan = scan(:,[1,2]);
                 
-                % extract points around the current scan for a map
-                map = map(map(:,1) > min(scan(:,1)) - 1, :);
-                map = map(map(:,1) < max(scan(:,1)) + 1, :);
-                map = map(map(:,2) > min(scan(:,2)) - 1, :);
-                map = map(map(:,2) < max(scan(:,2)) + 1, :);
+                % extract points around the current scan for a reference map
+                borderSize = 1; % (Meters)
+                map = map(map(:,1) > min(scan(:,1)) - borderSize, :);
+                map = map(map(:,1) < max(scan(:,1)) + borderSize, :);
+                map = map(map(:,2) > min(scan(:,2)) - borderSize, :);
+                map = map(map(:,2) < max(scan(:,2)) + borderSize, :);
                 
                 % Limit number of points in the map
                 I = randsample(size(map,1), min(size(map,1), 2000));
@@ -99,11 +109,11 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
                                         'searchRadius', 4,                     ...
                                         'lidarStd', 0.04,                      ...
                                                                                ...
-                                        'thetaRange', deg2rad(30),            ...
-                                        'dTheta', deg2rad(1), ...
+                                        'thetaRange', deg2rad(30) * step / 50,            ...
+                                        'dTheta', deg2rad(1) * step / 50, ...
                                                                                ...
-                                        'xRange', 1,         ...
-                                        'yRange', 1,         ... 
+                                        'xRange', 1 * step / 50,         ...
+                                        'yRange', 1 * step / 50,         ... 
                                         'pixelSize', 0.1); 
                                     
 
@@ -112,11 +122,11 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
                                         'searchRadius', 4,                     ...
                                         'lidarStd', 0.01,                      ...
                                                                                ...
-                                        'thetaRange', deg2rad(2),            ...
-                                        'dTheta', deg2rad(.05), ...
+                                        'thetaRange', deg2rad(2) * step / 50,            ...
+                                        'dTheta', deg2rad(.1) * step / 50, ...
                                                                                ...
-                                        'xRange', 0.2,         ...
-                                        'yRange', 0.2,         ... 
+                                        'xRange', 0.2 * step / 50,         ...
+                                        'yRange', 0.2 * step / 50,         ... 
                                         'pixelSize', 0.03);
                                     
             
@@ -147,7 +157,8 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             tmp(3) = rad2deg(tmp(3));
             fprintf(['\t' repmat('%g\t', 1, size(tmp, 2)) '\n'], tmp')
             fprintf('PSM: %d iterations with %g error\n', iter, err)
-    end
+    end    
+    fprintf('ScanMatcher: Scan %d matched in %.1f seconds. \n', scanIdx, toc(ScanMatch))
     
     % Rotate translation into map frame
     if useScan2World
@@ -160,6 +171,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
               0           0           1];
     mapT  = T * Trans;
     
+    
     % Create Transformation
     pose = pose + [mapT(1:2), -T(3)];
     path(end+1,:) = pose;
@@ -171,6 +183,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     Trans = [ cos(theta) -sin(theta) dx;
               sin(theta)  cos(theta) dy;
                        0           0  1];
+    
     
     % Local Transformation
     dx = T(1);
@@ -226,8 +239,6 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     else
         map = scan;
     end
-    
-
     
     drawnow
     pause(.1)
