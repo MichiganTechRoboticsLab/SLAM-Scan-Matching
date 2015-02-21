@@ -68,7 +68,7 @@ function [ T, mapTable] = olson(guess, scan, map, varargin)
                 temp = tempTheta + repmat([x,y],N,1);
                 
                 % Convert points to pixels
-                scanLookup = ptToPx(temp, pixelSize, mapRangeX, mapRangeY, mapMinX, mapMinY, mapMaxX, mapMaxY);
+                scanLookup = ptToPx(temp, pixelSize, mapMinX, mapMinY, mapMaxX, mapMaxY);
                 
                 % Remove out of bounds points
                 scanLookup(scanLookup(:,1) <= 0 | scanLookup(:,2) <= 0 | scanLookup(:,1) > size(mapTable,1) | scanLookup(:,2) > size(mapTable,2), :) = []; 

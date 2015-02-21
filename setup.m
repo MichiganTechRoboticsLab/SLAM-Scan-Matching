@@ -5,12 +5,13 @@ load('../datasets/hallroomvn.mat')
 
 % Set up paths
 wd = pwd;
-addpath( wd, [wd '/GICP'], [wd '/Olson'], [wd '/PSM'], [wd '/util'])
+addpath( wd, [wd '/GICP'], [wd '/Olson'], [wd '/PSM'], [wd '/hill'], [wd '/util'])
 
 % Set up default function
-% GICP = 0
-% Olsen = 1
-% PSM = 2
+% 0: GICP
+% 1: Olsen
+% 2: PSM 
+% 3: Hill-Climbing
 
-algo = 1;
+algo = 3;
 

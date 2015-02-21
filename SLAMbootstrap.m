@@ -15,8 +15,8 @@ path = [0 0 0];
 world = [];
 T = [0 0 0];
 init_guess = [0 0 0];
-usePrevOffsetAsGuess = true;
-useScan2World = true;
+usePrevOffsetAsGuess = false;
+useScan2World = false;
 
 
 % Create Figures
@@ -144,6 +144,13 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             fprintf(['\t' repmat('%g\t', 1, size(tmp, 2)) '\n'], tmp')
             fprintf('PSM: %d iterations with %g error\n', iter, err)
             
+        case 3  % Hill- Climbing
+            
+            % Sensor pose for each point in the map for ray tracing.
+            poses = repmat([0 0], size(map, 1), 1);
+            
+            [ T, ogrid ] = hcm(init_guess, scan(1:end,:), map(1:end,:), poses);
+
     end    
     fprintf('ScanMatcher: Scan %d matched in %.1f seconds. \n', scanIdx, toc(ScanMatch))
         
@@ -240,6 +247,16 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             colormap(bone)
             axis equal
             title(['High-resolution lookup table, Scan: ' num2str(scanIdx)]);
+            
+
+        case 3  % Hill Climbing
+            
+            % Occupancy Grid
+            change_current_figure(figs(3));
+            cla
+            imagesc(ogrid.grid)
+            axis equal
+            colormap([1 1 1; 0.5 0.5 0.5; 0 0 0]);
     end 
     
     
