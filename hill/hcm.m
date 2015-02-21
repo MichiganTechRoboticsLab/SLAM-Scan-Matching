@@ -16,50 +16,54 @@ function [ T, ogrid ] = hcm( guess, scan, map, poses, varargin)
     
     ogrid = oGrid(map, poses, pixelSize);
     
-    
     % Gauss-Newton gradient Decent
-    
+
     % (eq 7) Current transform between map and scan
     e = T';
-    
+
     % (eq 8) Scan points transformed to current estimate
     theta = e(3);
     m = [cos(theta) -sin(theta);
          sin(theta)  cos(theta)] ;
     S = m * scan' + repmat( T(1:2)', 1, size(scan,1)) ;
-    
+
     % Pixel values at each estimated hit location
     M = ogrid_subpixel(ogrid, S');
-    
+
     % Fudge hits off the map
     M(isnan(M)) = 0;
-    
-    
+
+
     % (eq 9) Error function for current pose
     err = sum(1 - M);
-    
+
     % (eq 13) H matrix
     [dx, dy] = ogrid_gradient( ogrid, S' );
     dM = [dx; dy];
-    
+
     for i = 1:size(scan,1)
         x = scan(i,1);
         y = scan(i,2);
         w = T(3);
-        
+
         dS = [1 0 -sin(w) * x - cos(w)*y;
               0 1  cos(w) * x - sin(w)*y]; 
-        
-        h(i, :) = dM(:,i) * dS;
+
+        h(i, :) = dM(:,i)' * dS;
     end
-        
+
     H = h'*h;
-    
-    %dT = inv(H) * sum(dS' * (1 - M);
-    
-    
-    % Move in the direction of the gradient 
-    T = T + dt;
+
+    N = size(scan,1)
+    temp = zeros(1,3);
+    for idx = 1:N
+        temp = temp + dM(:,idx)'*dS * (1 - M(idx))
+    end
+    dt = inv(H) * temp'
+    %dT = inv(H) * sum((dM'*dS)')' * (1 - M) ;
+
+    % Move in the direction of the gradient
+    T = T + dt';
     
     return
     
