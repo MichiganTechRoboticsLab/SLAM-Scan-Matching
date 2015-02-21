@@ -3,7 +3,7 @@ clc
 nScanIndex = unique(Lidar_ScanIndex);
 
 numberOfScans = 100000;
-start = 1;
+start = 2201;
 step = 50; % Scans
 stop = start + step * numberOfScans;
 
@@ -30,6 +30,8 @@ if ~exist('figs','var')
         case 1
             figs(3) = figure;
             figs(4) = figure;
+        case 3
+            figs(3) = figure;
     end
     
 end
@@ -254,7 +256,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             % Occupancy Grid
             change_current_figure(figs(3));
             cla
-            imagesc(ogrid.grid)
+            imagesc(imrotate(ogrid.grid,90))
             axis equal
             colormap([1 1 1; 0.5 0.5 0.5; 0 0 0]);
     end 
