@@ -42,7 +42,7 @@ function [lookupTable_d, totalRangeX, totalRangeY, minX, minY, maxX, maxY] = gen
     maxPxValue = normpdf(0, 0, lidarStd);
     
     % Convert map points to pixels
-    dataP = ptToPx(data, pixelSize, totalRangeX, totalRangeY, minX, minY, maxX, maxY);
+    dataP = ptToPx(data, pixelSize, minX, minY, maxX, maxY);
     
     % Add a blurred normal distibution to the map at each hit location
     for idx=1:size(dataP,1)

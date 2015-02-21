@@ -6,10 +6,10 @@ T = [0 0 0];
 
 %first we need to calculate the lookup table
 [lookupTable_d, RangeX, RangeY, minX, minY, maxX, maxY] =  genLookupTable(scan, searchRadius, lidarStd, pixelSize);
-scanPix = ptToPx(scan, pixelSize, RangeX, RangeY, minX, minY, maxX, maxY);
+scanPix = ptToPx(scan, pixelSize, minX, minY, maxX, maxY);
 
 for idx=1:size(scan,1)
-    p = ptToPx(scan(idx,:), pixelSize, RangeX, RangeY, minX, minY, maxX, maxY)
+    p = ptToPx(scan(idx,:), pixelSize,  minX, minY, maxX, maxY)
     region = findFourNearest( scan(idx,:), pixelSize, RangeX, RangeY, minX, minY, maxX, maxY)
 end
 

@@ -3,7 +3,7 @@ clc
 nScanIndex = unique(Lidar_ScanIndex);
 
 numberOfScans = 100000;
-start = 2201;
+start = 2001;
 step = 50; % Scans
 stop = start + step * numberOfScans;
 

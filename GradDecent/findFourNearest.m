@@ -11,7 +11,7 @@ b = b + round(mod(pt(2),pixelSize)/pixelSize);
 p = [ pixelSize/2 pixelSize/2 ];
 p = [ [-1 -1].*p; [1 -1].*p; [-1 1].*p; [1 1].*p ];
 p = p + repmat( [ a b ] , [ 4 1 ] );
-p = ptToPx(p, pixelSize, RangeX, RangeY, minX, minY, maxX, maxY);
+p = ptToPx(p, pixelSize, minX, minY, maxX, maxY);
 
 end
 
