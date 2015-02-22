@@ -3,8 +3,13 @@ function [ dx, dy ] = ogrid_gradient( ogrid, pts  )
 %   Uses bilinear filtering to achieve subpixel resolution
 
     % Convert from meters to pixel location
-    x = (pts(:,1) - ogrid.minX) / (ogrid.maxX - ogrid.minX) * size(ogrid.grid, 1) + 1;
-    y = (pts(:,2) - ogrid.minY) / (ogrid.maxY - ogrid.minY) * size(ogrid.grid, 2) + 1;
+    %x = (pts(:,1) - ogrid.minX) / (ogrid.maxX - ogrid.minX) * size(ogrid.grid, 1) + 1;
+    %y = (pts(:,2) - ogrid.minY) / (ogrid.maxY - ogrid.minY) * size(ogrid.grid, 2) + 1;
+    
+    x = (pts(:,1) - ogrid.minX) / (ogrid.maxX - ogrid.minX + ogrid.pixelSize) * size(ogrid.grid, 1);
+    y = (pts(:,2) - ogrid.minY) / (ogrid.maxY - ogrid.minY + ogrid.pixelSize) * size(ogrid.grid, 2);
+    
+    
     
     for i = 1:size(pts,1)
         

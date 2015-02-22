@@ -1,14 +1,21 @@
-function [ ogrid ] = oGrid( pointcloud, poses, pixelSize)
+function [ ogrid ] = oGrid( pts, poses, pixelSize)
 %oGrid Generate an occupancy grid from point cloud
 %   Detailed explanation goes here
 
     % Range in meters + border for search pixels
     borderSize = 0.75;
-    minX = min(pointcloud(:,1)) - borderSize;
-    minY = min(pointcloud(:,2)) - borderSize;
-    maxX = max(pointcloud(:,1)) + borderSize;
-    maxY = max(pointcloud(:,2)) + borderSize;
-        
+    minX = min(pts(:,1)) - borderSize;
+    minY = min(pts(:,2)) - borderSize;
+    maxX = max(pts(:,1)) + borderSize;
+    maxY = max(pts(:,2)) + borderSize;
+    
+    % Store relivant properties in the ogrid structure
+    ogrid.pixelSize = pixelSize;
+    ogrid.minX = minX;
+    ogrid.minY = minY;
+    ogrid.maxX = ceil(maxX / pixelSize) * pixelSize;
+    ogrid.maxY = ceil(maxY / pixelSize) * pixelSize;
+    
     % Intialize an empty grid
     RangeX = maxX - minX;
     RangeY = maxY - minY;
@@ -47,18 +54,19 @@ function [ ogrid ] = oGrid( pointcloud, poses, pixelSize)
     
     
     % Fill in hits
-    hits = ptToPx(pointcloud, pixelSize, minX, minY, maxX, maxY);
+    %hits = ptToPx(pointcloud, pixelSize, minX, minY, maxX, maxY);
+    % I think the above function isn't quite right...
+    
+    hits(:,1) = (pts(:,1) - ogrid.minX) / (ogrid.maxX - ogrid.minX + ogrid.pixelSize) * size(ogrid.grid, 1);
+    hits(:,2) = (pts(:,2) - ogrid.minY) / (ogrid.maxY - ogrid.minY + ogrid.pixelSize) * size(ogrid.grid, 2);
+   
+    hits = round(hits);
+    
     hits = unique(hits, 'rows');
     i = sub2ind(size(ogrid.grid), hits(:,1), hits(:,2));
     ogrid.grid(i) = 1;
     
     
-    % Store relivant properties in the ogrid structure
-    ogrid.pixelSize = pixelSize;
-    ogrid.minX = minX;
-    ogrid.minY = minY;
-    ogrid.maxX = maxX;
-    ogrid.maxY = maxY;
 
 end
 

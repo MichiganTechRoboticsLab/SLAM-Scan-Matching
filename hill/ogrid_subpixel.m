@@ -3,8 +3,23 @@ function [ V ] = ogrid_subpixel( ogrid, pts )
 %   Uses bilinear filtering to achieve subpixel resolution
 
     % Convert from meters to pixel location
-    x = (pts(:,1) - ogrid.minX) / (ogrid.maxX - ogrid.minX + ogrid.pixelSize) * size(ogrid.grid, 1) + ogrid.pixelSize ;
-    y = (pts(:,2) - ogrid.minY) / (ogrid.maxY - ogrid.minY + ogrid.pixelSize) * size(ogrid.grid, 2) + ogrid.pixelSize ;
+%     x = (pts(:,1) - ogrid.minX) / (ogrid.maxX - ogrid.minX + ogrid.pixelSize) * size(ogrid.grid, 1) + ogrid.pixelSize ;
+%     y = (pts(:,2) - ogrid.minY) / (ogrid.maxY - ogrid.minY + ogrid.pixelSize) * size(ogrid.grid, 2) + ogrid.pixelSize ;
+%     
+    
+    
+    x = (pts(:,1) - ogrid.minX) / (ogrid.maxX - ogrid.minX + ogrid.pixelSize) * size(ogrid.grid, 1);
+    y = (pts(:,2) - ogrid.minY) / (ogrid.maxY - ogrid.minY + ogrid.pixelSize) * size(ogrid.grid, 2);
+    
+
+%     RangeX = ogrid.maxX - ogrid.minX;
+%     RangeY = ogrid.maxY - ogrid.minY;
+%     x = (RangeX + ogrid.pixelSize )*(pts(:,1) - ogrid.minX)/(RangeX) ;
+%     y = (RangeY + ogrid.pixelSize )*(pts(:,2) - ogrid.minY)/(RangeY) ;
+%     
+%     x = x / ogrid.pixelSize;
+%     y = y / ogrid.pixelSize;
+    
     
 %     RangeX = ogrid.maxX - ogrid.minX;
 %     RangeY = ogrid.maxY - ogrid.minY;
