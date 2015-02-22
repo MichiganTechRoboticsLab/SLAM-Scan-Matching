@@ -1,7 +1,7 @@
 clear
 
 % Load sensor dataset
-load('../datasets/hallroomvn.mat')
+load('../data/hallroomvn.mat')
 
 % Set up paths
 wd = pwd;
