@@ -1,6 +1,7 @@
 function dth = orientationSearch(ref, newR, newBad)
     %% constants
     global PM_SEARCH_WINDOW
+    global PM_MAX_ERR
 
     global PM_DFI
     %%
@@ -28,11 +29,11 @@ function dth = orientationSearch(ref, newR, newBad)
         nI = minI:maxI;
         rI = nI + di;
         delta = abs(newR(nI) - ref.data(rI,2));
-        delta(newBad(nI) | ref.bad(rI)) = [];
+        delta(~(newBad(nI) == 0 & ref.bad(rI) == 0 & delta < PM_MAX_ERR)) = [];
         if(length(delta) > 0)
             err(k) = mean(delta);
         else
-            err(k) = LARGE_NUMBER
+            err(k) = LARGE_NUMBER;
         end
         beta(k) = di;
         k = k + 1;

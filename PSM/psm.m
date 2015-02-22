@@ -36,17 +36,17 @@ function [ offset, iter, avg_err ] = psm( offset, scan, ref, varargin )
     global PM_CO
 
     %% SETUP CONSTANTS
-    PM_STOP_COND             = .004;
-    PM_MAX_ITER              = 30;
+    PM_STOP_COND             = .0004;
+    PM_MAX_ITER              = 60;
     PM_MAX_RANGE             = 30;
     PM_MIN_RANGE             = .1;
     LASER_Y                  = 0;
     PM_FOV                   = 270;
     PM_L_POINTS              = 1081;
-    PM_WEIGHTING_FACTOR      = 70*70;
+    PM_WEIGHTING_FACTOR      = 30*30;
     PM_SEG_MAX_DIST          = .2;
     PM_CHANGE_WEIGHT_ITER    = 10;
-    PM_MAX_ERR               = 1;
+    PM_MAX_ERR               = .3;
     PM_SEARCH_WINDOW         = 200;
 
     PM_RANGE                 = 1;
