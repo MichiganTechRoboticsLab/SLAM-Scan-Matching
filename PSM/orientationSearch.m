@@ -29,8 +29,8 @@ function dth = orientationSearch(ref, newR, newBad)
         nI = minI:maxI;
         rI = nI + di;
         delta = abs(newR(nI) - ref.data(rI,2));
-        delta(~(newBad(nI) == 0 & ref.bad(rI) == 0 & delta < PM_MAX_ERR)) = [];
-        if(length(delta) > 0)
+        delta(~(newBad(nI) == 0 & ref.bad(rI) == 0 )) = [];
+        if(~isempty(delta))
             err(k) = mean(delta);
         else
             err(k) = LARGE_NUMBER;
@@ -41,15 +41,19 @@ function dth = orientationSearch(ref, newR, newBad)
 
     [~, imin] = min(err);
     dth = beta(imin)*PM_DFI;
-
-    if(imin >= 2 && imin < (k))
-        D = err(imin -1) + err(imin+1) -2 * err(imin);
-        d = LARGE_NUMBER;
-        if (abs(D) > .01 && err(imin-1) > err(imin) && err(imin+1) > err(imin))
-            d = (err(imin-1) - err(imin+1)) / (D/2);
-        end
-        if abs(d) < 1
-            dth = dth + d*PM_DFI;
-        end
-    end
+    m = 0;
+%     if(imin >= 2 && imin < (k))
+%         m = (err(imin+1) - err(imin - 1))/(2*(2 * err(imin) - err(imin-1) - err(imin + 1)));
+%     end
+    dth = dth+m;
+%     if(imin >= 2 && imin < (k))
+%         D = err(imin -1) + err(imin+1) -2 * err(imin);
+%         d = LARGE_NUMBER;
+%         if (abs(D) > .01 && err(imin-1) > err(imin) && err(imin+1) > err(imin))
+%             d = (err(imin-1) - err(imin+1)) / D / 2;
+%         end
+%         if abs(d) < 1
+%             dth = dth + d*PM_DFI;
+%         end
+%     end
 end

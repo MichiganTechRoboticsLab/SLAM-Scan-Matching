@@ -53,7 +53,7 @@ nScanIndex = unique(Lidar_ScanIndex);
 
 numberOfScans = 100000;
 start = 1;
-step = 1; % Scans
+step = 50; % Scans
 stop = start + step * numberOfScans;
 
 skip = 1; % Points
@@ -202,11 +202,20 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             fprintf(['\t' repmat('%g\t', 1, size(tmp, 2)) '\n'], tmp')
             
         case 2
-            [ T, iter, err] = psm(init_guess, scan(1:skip:end,:), map(1:skip:end,:));
-            T(3) = -T(3);
+            [ T, iter, err] = psm(init_guess, scan(1:skip:end,:), map(1:skip:end,:), ...
+                'PM_STOP_COND', .0004,                                               ...
+                'PM_MAX_ITER', 30,                                                   ...
+                'PM_MAX_RANGE', 30,                                                  ...
+                'PM_MIN_RANGE', .1,                                                  ...
+                'PM_WEIGHTING_FACTOR', 30*30,                                        ...
+                'PM_SEG_MAX_DIST', .2,                                               ...
+                'PM_CHANGE_WEIGHT_ITER', 10,                                         ...
+                'PM_MAX_ERR', .3,                                                    ...
+                'PM_SEARCH_WINDOW', 300);
             fprintf('PSM: Final Guess\n')
             tmp = T;
             tmp(3) = rad2deg(tmp(3));
+            T(3) = -T(3);
             fprintf(['\t' repmat('%g\t', 1, size(tmp, 2)) '\n'], tmp')
             fprintf('PSM: %d iterations with %g error\n', iter, err)
             

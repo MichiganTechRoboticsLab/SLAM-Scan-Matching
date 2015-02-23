@@ -2,8 +2,18 @@
 function [ offset, iter, avg_err ] = psm( offset, scan, ref, varargin )
     %% setupParser
     p = inputParser;
-
-
+    p.addParameter('PM_STOP_COND', .0004, @(x)isnumeric(x));
+    p.addParameter('PM_MAX_ITER', 60, @(x)isnumeric(x));
+    p.addParameter('PM_MAX_RANGE', 30, @(x)isnumeric(x));
+    p.addParameter('PM_MIN_RANGE', .1, @(x)isnumeric(x));
+    p.addParameter('LASER_Y', 0, @(x)isnumeric(x));
+    p.addParameter('PM_FOV', 270, @(x)isnumeric(x));
+    p.addParameter('PM_L_POINTS', 1081, @(x)isnumeric(x));
+    p.addParameter('PM_WEIGHTING_FACTOR', 30*30, @(x)isnumeric(x));
+    p.addParameter('PM_SEG_MAX_DIST', .2, @(x)isnumeric(x));
+    p.addParameter('PM_CHANGE_WEIGHT_ITER', 10, @(x)isnumeric(x));
+    p.addParameter('PM_MAX_ERR', .3, @(x)isnumeric(x));
+    p.addParameter('PM_SEARCH_WINDOW', 200, @(x)isnumeric(x));
 
     p.parse(varargin{:})
 
@@ -36,18 +46,18 @@ function [ offset, iter, avg_err ] = psm( offset, scan, ref, varargin )
     global PM_CO
 
     %% SETUP CONSTANTS
-    PM_STOP_COND             = .0004;
-    PM_MAX_ITER              = 60;
-    PM_MAX_RANGE             = 30;
-    PM_MIN_RANGE             = .1;
-    LASER_Y                  = 0;
-    PM_FOV                   = 270;
-    PM_L_POINTS              = 1081;
-    PM_WEIGHTING_FACTOR      = 30*30;
-    PM_SEG_MAX_DIST          = .2;
-    PM_CHANGE_WEIGHT_ITER    = 10;
-    PM_MAX_ERR               = .3;
-    PM_SEARCH_WINDOW         = 200;
+    PM_STOP_COND             = p.Results.PM_STOP_COND;
+    PM_MAX_ITER              = p.Results.PM_MAX_ITER;
+    PM_MAX_RANGE             = p.Results.PM_MAX_RANGE;
+    PM_MIN_RANGE             = p.Results.PM_MIN_RANGE;
+    LASER_Y                  = p.Results.LASER_Y;
+    PM_FOV                   = p.Results.PM_FOV;
+    PM_L_POINTS              = p.Results.PM_L_POINTS;
+    PM_WEIGHTING_FACTOR      = p.Results.PM_WEIGHTING_FACTOR;
+    PM_SEG_MAX_DIST          = p.Results.PM_SEG_MAX_DIST;
+    PM_CHANGE_WEIGHT_ITER    = p.Results.PM_CHANGE_WEIGHT_ITER;
+    PM_MAX_ERR               = p.Results.PM_MAX_ERR;
+    PM_SEARCH_WINDOW         = p.Results.PM_SEARCH_WINDOW;
 
     PM_RANGE                 = 1;
     PM_MOVING                = 2;
