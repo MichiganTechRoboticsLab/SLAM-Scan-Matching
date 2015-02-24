@@ -80,27 +80,11 @@ init_guess = [0 0 0];
 usePrevOffsetAsGuess = false;
 useScan2World = false;
 
-% Create Figures
-if ~exist('figs','var')
-    figs = [];
-    
-    figs(1) = figure;
-    figs(2) = figure;
-    
-    switch algo
-        case 1
-            figs(3) = figure;
-            figs(4) = figure;
-        case 3
-            figs(3) = figure;
-    end
-    
-end
 
 % Clear all figures before running
-for f = figs
-    change_current_figure(f)
-    cla
+for i = 1:8
+    figure(i);
+    clf;
 end
 drawnow;
 pause(0.1);
@@ -166,6 +150,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         map = map(I,:);
     end
     
+    
     % Scan Matching Algo
     ScanMatch = tic;
     switch algo
@@ -224,14 +209,12 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             fprintf('PSM: %d iterations with %g error\n', iter, err)
             
         case 3  % Hill- Climbing
-            
-            % Sensor pose for each point in the map for ray tracing.
-            poses = repmat([0 0], size(map, 1), 1);
-            
-            [ T, ogrid ] = hcm(init_guess, scan(1:end,:), map(1:end,:), poses);
+                        
+            [ T, ogrid ] = hcm(init_guess, scan(1:end,:), map(1:end,:));
             
     end
     fprintf('ScanMatcher: Scan %d matched in %.1f seconds. \n', scanIdx, toc(ScanMatch))
+    
     
     % Update current pose
     if useScan2World
@@ -290,7 +273,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     
     
     % Plot World
-    change_current_figure(figs(1));
+    change_current_figure(1);
     cla
     hold on
     plot(world(:,1), world(:,2), 'k.', 'MarkerSize', 1)
@@ -300,7 +283,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     
     
     % Plot Transformed and Map and Scans
-    change_current_figure(figs(2));
+    change_current_figure(2);
     cla
     hold on
     
@@ -331,7 +314,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         case 1  % Olson
             
             % Low-resolution lookup table
-            change_current_figure(figs(3));
+            change_current_figure(3);
             cla
             imagesc(imrotate(lookupTable_l,90))
             colormap(bone)
@@ -349,7 +332,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         case 3  % Hill Climbing
             
             % Occupancy Grid
-            change_current_figure(figs(3));
+            change_current_figure(3);
             cla
             imagesc(imrotate(ogrid.grid,90))
             axis equal
