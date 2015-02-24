@@ -41,19 +41,19 @@ function dth = orientationSearch(ref, newR, newBad)
 
     [~, imin] = min(err);
     dth = beta(imin)*PM_DFI;
-    m = 0;
+%     m = 0;
 %     if(imin >= 2 && imin < (k))
 %         m = (err(imin+1) - err(imin - 1))/(2*(2 * err(imin) - err(imin-1) - err(imin + 1)));
 %     end
-    dth = dth+m;
-%     if(imin >= 2 && imin < (k))
-%         D = err(imin -1) + err(imin+1) -2 * err(imin);
-%         d = LARGE_NUMBER;
-%         if (abs(D) > .01 && err(imin-1) > err(imin) && err(imin+1) > err(imin))
-%             d = (err(imin-1) - err(imin+1)) / D / 2;
-%         end
-%         if abs(d) < 1
-%             dth = dth + d*PM_DFI;
-%         end
-%     end
+%     dth = dth+m;
+if(imin >= 2 && imin < (k))
+    D = err(imin -1) + err(imin+1) -2 * err(imin);
+    d = LARGE_NUMBER;
+    if (abs(D) > .01 && err(imin-1) > err(imin) && err(imin+1) > err(imin))
+        d = (err(imin-1) - err(imin+1)) / D / 2;
+    end
+    if abs(d) < 1
+        dth = dth + d*PM_DFI;
+    end
+end
 end

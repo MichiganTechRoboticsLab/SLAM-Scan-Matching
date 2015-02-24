@@ -77,11 +77,11 @@ path = [0 0 0];
 world = [];
 T = [0 0 0];
 init_guess = [0 0 0];
-usePrevOffsetAsGuess = false;
+usePrevOffsetAsGuess = true;
 useScan2World = false;
 
 % Create Figures
-if ~exist('figs','var')
+if ~exist('figs','var') || isempty(figs)
     figs = [];
     
     figs(1) = figure;
@@ -92,6 +92,8 @@ if ~exist('figs','var')
             figs(3) = figure;
             figs(4) = figure;
         case 3
+            figs(3) = figure;
+        case 2
             figs(3) = figure;
     end
     
@@ -215,12 +217,12 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             fprintf(['\t' repmat('%g\t', 1, size(tmp, 2)) '\n'], tmp')
             
         case 2
-            [ T, iter, err] = psm(init_guess, scan(1:skip:end,:), map(1:skip:end,:), ...
-                'PM_STOP_COND', .0004,                                               ...
+            [ T, iter, err, dxs, dys, dths, errs ] = psm(init_guess, scan(1:skip:end,:), map(1:skip:end,:), ...
+                'PM_STOP_COND', .004,                                               ...
                 'PM_MAX_ITER', 30,                                                   ...
                 'PM_MAX_RANGE', 30,                                                  ...
                 'PM_MIN_RANGE', .1,                                                  ...
-                'PM_WEIGHTING_FACTOR', 30*30,                                        ...
+                'PM_WEIGHTING_FACTOR', .30*.30,                                        ...
                 'PM_SEG_MAX_DIST', .2,                                               ...
                 'PM_CHANGE_WEIGHT_ITER', 10,                                         ...
                 'PM_MAX_ERR', .3,                                                    ...
@@ -354,7 +356,17 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             colormap(bone)
             axis equal
             title(['High-resolution lookup table, Scan: ' num2str(scanIdx)]);
-            
+        case 2  % PSM
+            change_current_figure(figs(3));
+            cla
+            hold on
+            iters = 1:iter-1;
+            plot(iters, dxs(2:end), 'o-');
+            plot(iters, dys(2:end), '^-');
+            plot(iters, rad2deg(dths(2:end)),'x-');
+            hold off
+            axis tight
+            legend('X', 'Y', 'Theta')
         case 3  % Hill Climbing
             
             % Occupancy Grid
