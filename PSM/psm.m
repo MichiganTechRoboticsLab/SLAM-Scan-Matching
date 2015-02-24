@@ -1,5 +1,5 @@
 %% MainFunction
-function [ offset, iter, avg_err, dxs, dys, dths, errs ] = psm( offset, scan, ref, varargin )
+function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths ] = psm( offset, scan, ref, varargin )
     %% setupParser
     p = inputParser;
     p.addParameter('PM_STOP_COND', .0004, @(x)isnumeric(x));
@@ -47,6 +47,7 @@ function [ offset, iter, avg_err, dxs, dys, dths, errs ] = psm( offset, scan, re
     
     global figs
     %% SETUP CONSTANTS
+    ROLL_WINDOW_SIZE         = 20;
     PM_STOP_COND             = p.Results.PM_STOP_COND;
     PM_MAX_ITER              = p.Results.PM_MAX_ITER;
     PM_MAX_RANGE             = p.Results.PM_MAX_RANGE;
@@ -78,9 +79,18 @@ function [ offset, iter, avg_err, dxs, dys, dths, errs ] = psm( offset, scan, re
     C = PM_WEIGHTING_FACTOR;
     
     %% PSM
+    fprintf('PSM: Initial Guess: ')
+    tmp = offset;
+    tmp(3) = rad2deg(tmp(3));
+    fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
+    scan(:,2) = scan(:,2) * 100;
+    ref(:,2) = ref(:,2) * 100;
     dxs = [];
     dys = [];
     dths = [];
+    axs = [];
+    ays = [];
+    aths = [];
     errs = [];
     lsr = struct;
     lsr.rx = 0;
@@ -114,28 +124,36 @@ function [ offset, iter, avg_err, dxs, dys, dths, errs ] = psm( offset, scan, re
     t23 = cos( rth - ath) * PM_LASER_Y - sin(rth) * ax + cos(rth)*ay - cos(rth) * ry -rx * sin(rth) - PM_LASER_Y;
     
     refS.rx = 0; refS.ry = 0; refS.th = 0;
-    refS.rx = t13; refS.ry = t23; refS.th = ath - rth;
+    act.rx = t13; act.ry = t23; act.th = ath - rth;
     
     ax = act.rx; ay = act.ry; ath = act.th;
     
     iter = 0;
     smallCorrErr = 0;
     dx =0; dy = 0; dth=0; avg_err = 0;
+    
     while( iter < PM_MAX_ITER && smallCorrErr < 3)
         iter = iter+1;
-        if( (abs(dx) + abs(dy) + abs(dth)) < PM_STOP_COND)
+        if( (abs(dx*100) + abs(dy*100) + abs(dth)) < PM_STOP_COND)
             smallCorrErr = smallCorrErr + 1;
         else
             smallCorrErr = 0;
         end
+        axs = [ axs, ax];
+        ays = [ ays, ay];
+        aths = [ aths, ath];
         
         act.rx = ax;
         act.ry = ay;
         act.th = ath;
-        
         [act, newR, newBad ] = projectScan(act);
         
-        if ( mod(iter, 2))
+        tmps = act;
+        tmps.data(:,2) = newR;
+        tmps.bad = newBad;
+        [tmps.x, tmps.y ] = pol2cart(tmps.data(:,1), tmps.data(:,2));
+        plotSegments(tmps);
+        if ( mod(iter, 2) == 0)
             dth = orientationSearch(refS, newR, newBad);
             dxs = [dxs, dx];
             dys = [dys, dy];
@@ -146,7 +164,7 @@ function [ offset, iter, avg_err, dxs, dys, dths, errs ] = psm( offset, scan, re
         end
         
         
-        if (iter == PM_CHANGE_WEIGHT_ITER)
+        if (mod(iter,PM_CHANGE_WEIGHT_ITER) == 0)
             C = C/50;
         end
         
@@ -158,9 +176,37 @@ function [ offset, iter, avg_err, dxs, dys, dths, errs ] = psm( offset, scan, re
         ax = ax + dx;
         ay = ay + dy;
         
+        change_current_figure(figs(3));
+        cla
+        
+        
+        iters = max(1,iter-ROLL_WINDOW_SIZE):iter;
+        
+        subplot(3,1,1);
+        curticks = get(gca, 'XTick');
+        set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+        plot(iters, dxs(iters), 'o-');
+        title('Evolution of X');
+        axis([iters(1),max(2,iters(end)),-inf,inf])
+        
+        subplot(3,1,2);
+        curticks = get(gca, 'XTick');
+        set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+        plot(iters, dys(iters), 's-');
+        title('Evolution of Y');
+        axis([iters(1),max(2,iters(end)),-inf,inf])
+        
+        subplot(3,1,3);
+        curticks = get(gca, 'XTick');
+        set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+        plot(iters, rad2deg(dths(iters)),'x-');
+        title('Evolution of Ө');
+        axis([iters(1),max(2,iters(end)),-inf,inf])
+        
+        
     end
     
-    offset = [ax, ay, ath];
+    offset = [ax / 100, ay / 100, ath];
     %% cleanup
     clearvars -global PM*
 end

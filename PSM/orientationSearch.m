@@ -10,11 +10,10 @@ function dth = orientationSearch(ref, newR, newBad)
     k=1;
     e = 0;
     dth = 0;
-    err = zeros(size(newR,1),1);
+    beta = -PM_SEARCH_WINDOW:1:PM_SEARCH_WINDOW;
+    err = zeros(size(beta,2),1);
     err(:) = LARGE_NUMBER;
-    beta = zeros(size(newR,1),1);
-
-    for di = -PM_SEARCH_WINDOW:1:PM_SEARCH_WINDOW
+    for di = beta
         n = 0;
         e = 0;
         minI = 0; maxI=0;
@@ -35,25 +34,28 @@ function dth = orientationSearch(ref, newR, newBad)
         else
             err(k) = LARGE_NUMBER;
         end
-        beta(k) = di;
         k = k + 1;
     end
 
     [~, imin] = min(err);
+    global figs
+    change_current_figure(figs(6));
+    cla
+    plot(beta(imin-50:imin+50),err(imin-50:imin+50))
     dth = beta(imin)*PM_DFI;
-%     m = 0;
+        m = 0;
+        if(imin >= 2 && imin < (k))
+            m = (err(imin+1) - err(imin - 1))/(2*(2 * err(imin) - err(imin-1) - err(imin + 1)));
+        end
+        dth = dth+m*PM_DFI;
 %     if(imin >= 2 && imin < (k))
-%         m = (err(imin+1) - err(imin - 1))/(2*(2 * err(imin) - err(imin-1) - err(imin + 1)));
+%         D = err(imin -1) + err(imin+1) -2 * err(imin);
+%         d = LARGE_NUMBER;
+%         if (abs(D) > .01 && err(imin-1) > err(imin) && err(imin+1) > err(imin))
+%             d = (err(imin-1) - err(imin+1)) / D / 2;
+%         end
+%         if abs(d) < 1
+%             dth = dth + d*PM_DFI;
+%         end
 %     end
-%     dth = dth+m;
-if(imin >= 2 && imin < (k))
-    D = err(imin -1) + err(imin+1) -2 * err(imin);
-    d = LARGE_NUMBER;
-    if (abs(D) > .01 && err(imin-1) > err(imin) && err(imin+1) > err(imin))
-        d = (err(imin-1) - err(imin+1)) / D / 2;
-    end
-    if abs(d) < 1
-        dth = dth + d*PM_DFI;
-    end
-end
 end

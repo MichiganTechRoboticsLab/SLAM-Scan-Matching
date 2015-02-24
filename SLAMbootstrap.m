@@ -1,12 +1,16 @@
+
 clc
 
 if (~exist('init','var') || init == false)
     if (exist('useSimWorld','var') && useSimWorld == true)
         Lidar_Ranges = Test_Lidar_Ranges;
+        Lidar_Ranges = Lidar_Ranges + normrnd(0, .001, size(Test_Lidar_Ranges,1),1);
+        
         Lidar_ScanIndex = Test_Lidar_ScanIndex;
         Lidar_Angles = Test_Lidar_Angles;
         [Lidar_X, Lidar_Y] = pol2cart(Lidar_Angles, Lidar_Ranges);
     else
+        useSimWorld = false;
         % Grab range measurements from Lidar data (First Echo)
         I = 3:6:6484;
         Lidar_Ranges = Lidar_Log(:, I);
@@ -45,7 +49,7 @@ if (~exist('init','var') || init == false)
         Lidar_Ranges = Lidar_Ranges / 1000;
         switch algo
             case 2
-                fprintf('Data is ready for PSM\n')
+                fprintf('ScanMatcher: Data is ready for PSM\n')
             otherwise
                 % Remove invalid range data (Too close or too far)
                 I = Lidar_Ranges < 0.75 | Lidar_Ranges > 30;
@@ -66,7 +70,7 @@ nScanIndex = unique(Lidar_ScanIndex);
 
 numberOfScans = 100000;
 start = 1;
-step = 50; % Scans
+step = 10; % Scans
 stop = start + step * numberOfScans;
 
 skip = 1; % Points
@@ -77,11 +81,12 @@ path = [0 0 0];
 world = [];
 T = [0 0 0];
 init_guess = [0 0 0];
-usePrevOffsetAsGuess = true;
+usePrevOffsetAsGuess = false;
 useScan2World = false;
 
 % Create Figures
 if ~exist('figs','var') || isempty(figs)
+    global figs
     figs = [];
     
     figs(1) = figure;
@@ -95,6 +100,9 @@ if ~exist('figs','var') || isempty(figs)
             figs(3) = figure;
         case 2
             figs(3) = figure;
+            figs(4) = figure;
+            figs(5) = figure;
+            figs(6) = figure;
     end
     
 end
@@ -104,7 +112,7 @@ for f = figs
     change_current_figure(f)
     cla
 end
-drawnow;
+% drawnow;
 pause(0.1);
 
 
@@ -113,7 +121,7 @@ startTime = tic;
 for scanIdx = start:step:min(stop,size(nScanIndex,1))
     
     % Display current scan index
-    fprintf('Scan %d\n', scanIdx);
+    fprintf('ScanMatcher: Scan %d\n', scanIdx);
     
     % Get Current Scan
     switch algo
@@ -211,27 +219,27 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
                 'pixelSize', 0.03);
             
             
-            fprintf('OLSON: Final Guess\n')
+            fprintf('OLSON: Final Guess: ')
             tmp = T;
             tmp(3) = rad2deg(tmp(3));
-            fprintf(['\t' repmat('%g\t', 1, size(tmp, 2)) '\n'], tmp')
+            fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
             
         case 2
             [ T, iter, err, dxs, dys, dths, errs ] = psm(init_guess, scan(1:skip:end,:), map(1:skip:end,:), ...
-                'PM_STOP_COND', .004,                                               ...
-                'PM_MAX_ITER', 30,                                                   ...
-                'PM_MAX_RANGE', 30,                                                  ...
-                'PM_MIN_RANGE', .1,                                                  ...
-                'PM_WEIGHTING_FACTOR', .30*.30,                                        ...
-                'PM_SEG_MAX_DIST', .2,                                               ...
+                'PM_STOP_COND', .4,                                               ...
+                'PM_MAX_ITER', 90,                                                   ...
+                'PM_MAX_RANGE', 3000,                                                  ...
+                'PM_MIN_RANGE', 10,                                                  ...
+                'PM_WEIGHTING_FACTOR', 30*30,                                        ...
+                'PM_SEG_MAX_DIST', 20,                                               ...
                 'PM_CHANGE_WEIGHT_ITER', 10,                                         ...
-                'PM_MAX_ERR', .3,                                                    ...
-                'PM_SEARCH_WINDOW', 300);
-            fprintf('PSM: Final Guess\n')
+                'PM_MAX_ERR', 30,                                                    ...
+                'PM_SEARCH_WINDOW', 200);
+            fprintf('PSM: Final Guess: ')
             tmp = T;
             tmp(3) = rad2deg(tmp(3));
             T(3) = -T(3);
-            fprintf(['\t' repmat('%g\t', 1, size(tmp, 2)) '\n'], tmp')
+            fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
             fprintf('PSM: %d iterations with %g error\n', iter, err)
             
         case 3  % Hill- Climbing
@@ -257,6 +265,17 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         
         % Add previous scan to pose
         pose = pose + [mapT(1:2), -T(3)];
+    end
+    fprintf('ScanMatcher: Scan %d pose is ', scanIdx);
+    tmp = pose;
+    tmp(3) = rad2deg(tmp(3));
+    fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
+    if(useSimWorld)
+        goodPose = LidarPose(scanIdx,1:3);
+        tmp = goodPose;
+        tmp(3) = rad2deg(tmp(3));
+        fprintf('ScanMatcher: Scan %d pose should be ', scanIdx);
+        fprintf(['[ ' repmat('%g ', 1, size(goodPose, 2)-1) '%g ]\n'], goodPose')
     end
     path(end+1,:) = pose;
     
@@ -359,14 +378,28 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         case 2  % PSM
             change_current_figure(figs(3));
             cla
-            hold on
-            iters = 1:iter-1;
-            plot(iters, dxs(2:end), 'o-');
-            plot(iters, dys(2:end), '^-');
-            plot(iters, rad2deg(dths(2:end)),'x-');
-            hold off
+            
+            iters = 1:iter;
+            subplot(3,1,1);
+            curticks = get(gca, 'XTick');
+            set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+            plot(iters, abs(dxs(1:end)), 'o-');
             axis tight
-            legend('X', 'Y', 'Theta')
+            title('Evolution of X');
+            subplot(3,1,2);
+            curticks = get(gca, 'XTick');
+            set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+            plot(iters, abs(dys(1:end)), 's-');
+            axis tight
+            title('Evolution of Y');
+            subplot(3,1,3);
+            curticks = get(gca, 'XTick');
+            set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+            plot(iters, abs(rad2deg(dths(1:end))),'x-');
+            axis tight
+            title('Evolution of Ө');
+            axis tight
+            
         case 3  % Hill Climbing
             
             % Occupancy Grid
@@ -405,3 +438,4 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
 end
 
 toc(startTime)
+
