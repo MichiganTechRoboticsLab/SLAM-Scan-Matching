@@ -66,7 +66,7 @@ nScanIndex = unique(Lidar_ScanIndex);
 
 numberOfScans = 100000;
 start = 1;
-step = 10; % Scans
+step = 50; % Scans
 stop = start + step * numberOfScans;
 
 skip = 1; % Points

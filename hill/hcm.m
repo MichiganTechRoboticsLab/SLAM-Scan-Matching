@@ -73,7 +73,6 @@ function [ T, ogrid ] = hcm( guess, scan, map, poses, varargin)
         end
         dt = H\temp';
 
-
         % convert to meters
         dt(1) = dt(1) * pixelSize;
         dt(2) = dt(2) * pixelSize;
@@ -81,7 +80,10 @@ function [ T, ogrid ] = hcm( guess, scan, map, poses, varargin)
         % Move in the direction of the gradient
         % T = guess + dt';
         T = T + dt'
-    
+        T(3) = T(3) - dt(3);
+        
+        % DEBUGGING ONLY %
+        % T(3) = 0
         % Debug plot
         plotItteration( 3, ogrid, map, scan, T )
     end
