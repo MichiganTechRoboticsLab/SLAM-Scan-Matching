@@ -16,7 +16,7 @@ function [ T, ogrid ] = hcm( guess, scan, map, poses, varargin)
     
     ogrid = oGrid(map, poses, pixelSize);
     
-    for itter = 1:30
+    for iter = 1:100
         % Gauss-Newton gradient Decent
 
         % (eq 7) Current transform between map and scan
@@ -36,7 +36,10 @@ function [ T, ogrid ] = hcm( guess, scan, map, poses, varargin)
 
 
         % (eq 9) Error function for current pose
-        err(itter) = sum(1 - M);
+        err(iter) = sum(1 - M);
+        %if iter > 1 && err(iter-1) < err(iter)
+        %    break
+        %end
 
         % (eq 13) H matrix
         [dx, dy] = ogrid_gradient( ogrid, S' );
@@ -44,43 +47,49 @@ function [ T, ogrid ] = hcm( guess, scan, map, poses, varargin)
 
         N = size(scan,1);
 
-
         for i = 1:N
             x = scan(i,1);
             y = scan(i,2);
             w = T(3);
 
-            dS = [1 0 -sin(w) * x - cos(w)*y;
+            dS = [1 0 -sin(w) * x + cos(w)*y;
                   0 1  cos(w) * x - sin(w)*y]; 
 
             h(i, :) = dM(:,i)' * dS;
         end
 
         H = h'*h;
-
+        
+        %check if the matrix is singular
+        if rcond(H) < 1e-12
+            warning('singular matrix detected')
+            break;
+        end
         
         % (eq 12) Minimization function
         temp = zeros(1,3);
         for idx = 1:N
             temp = temp + dM(:,idx)'*dS * (1 - M(idx));
         end
-        dt = inv(H) * temp';
+        dt = H\temp';
 
 
         % convert to meters
         dt(1) = dt(1) * pixelSize;
         dt(2) = dt(2) * pixelSize;
 
-        
         % Move in the direction of the gradient
-        T = T + dt'; 
+        % T = guess + dt';
+        T = T + dt'
     
         % Debug plot
         plotItteration( 3, ogrid, map, scan, T )
     end
     
+    % DEBUGGING ONLY %
+    % T(3) = 0
     
-    return
+    % return
   
     % Subpixel and gradient function debug plots
     divby = 10;
