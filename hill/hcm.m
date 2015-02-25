@@ -46,22 +46,22 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
 
         N = size(scan,1);
 
-        % Naive Implemenation
+        % Naive Implemenation (AKA Dereck made it up....)
         if 1
-           % dont care about rotation right now.
-            %tmp = (1 - repmat(M,1,2));
-            %dt = sum(dM .* tmp', 2) / sum(M > 0.05);
-            
+           % dont care about rotation right now.            
             dt = sum(dM, 2); 
-            dt(1) = 0;
+            dt(1) = dt(1) / sum(dM(1,:) ~= 0);
             dt(2) = dt(2) / sum(dM(2,:) ~= 0);
             dt(3) = 0;
-           
             
+            
+            % Simulated annealing
             temp = (maxIterations-(iter/2))/(maxIterations);
-            
             dt = dt * temp;
         end
+        
+        
+        
         
         % Paper Implementation
         if 0
@@ -192,8 +192,6 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
            
         
 
-        fprintf('dt = %.4f %.4f %.4f\n', dt(1), dt(2), rad2deg(dt(3)) )
-        
         % convert to meters
         dt(1) = dt(1) * pixelSize;
         dt(2) = dt(2) * pixelSize;
@@ -206,7 +204,10 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
         
         
         % DEBUGGING ONLY %
-        plotItteration( 4, ogrid, map, scan, T(iter+1,:), err )
+
+        %fprintf('dt = %.4f %.4f %.4f\n', dt(1), dt(2), rad2deg(dt(3)) )
+        
+        %plotItteration( 4, ogrid, map, scan, T(iter+1,:), err )
         
         
         % Convergence Criteria
@@ -229,9 +230,9 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
     
     % Select best transform for solution
     [~,I] = min(err);
-    T = T(I,:)
+    T = T(I,:);
     
  
-    plotItteration( 4, ogrid, map, scan, T, err )
+    %plotItteration( 4, ogrid, map, scan, T, err )
     
 end

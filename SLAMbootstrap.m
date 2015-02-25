@@ -78,7 +78,7 @@ world = [];
 T = [0 0 0];
 init_guess = [0 0 0];
 usePrevOffsetAsGuess = false;
-useScan2World = false;
+useScan2World = true;
 connectTheDots = true;
 
 
@@ -229,9 +229,11 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             fprintf('PSM: %d iterations with %g error\n', iter, err)
             
         case 3  % Hill- Climbing                        
-            [T, ~    ] = hcm(init_guess, scan, map, 'pixelSize', 1);
-            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', .3);
-            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', .1);
+            searchStep = 0.5;
+            [T, ~    ] = hcm(init_guess, scan, map, 'pixelSize', searchStep);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 0.5);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 0.25);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 0.0625);
             %[T, ogrid] = hcm(T         , scan, map, 'pixelSize', .03);
             
     end
