@@ -3,7 +3,7 @@ function [ ogrid ] = oGrid( pts, poses, pixelSize)
 %   Detailed explanation goes here
 
     % Range in meters + border for search pixels
-    borderSize = 0.75;
+    borderSize = pixelSize*3;
     minX = min(pts(:,1)) - borderSize;
     minY = min(pts(:,2)) - borderSize;
     maxX = max(pts(:,1)) + borderSize;

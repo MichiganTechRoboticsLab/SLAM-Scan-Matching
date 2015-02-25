@@ -66,7 +66,7 @@ nScanIndex = unique(Lidar_ScanIndex);
 
 numberOfScans = 100000;
 start = 1;
-step = 50; % Scans
+step = 20; % Scans
 stop = start + step * numberOfScans;
 
 skip = 1; % Points
@@ -79,11 +79,16 @@ T = [0 0 0];
 init_guess = [0 0 0];
 usePrevOffsetAsGuess = false;
 useScan2World = false;
+connectTheDots = true;
 
 
 % Clear all figures before running
 for i = 1:8
+    if ~ishandle(i);
     figure(i);
+    end
+    
+    change_current_figure(i);
     clf;
 end
 drawnow;
@@ -119,7 +124,20 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         end
         world = tempMap;
         path = pose;
-        continue
+        
+        
+        if connectTheDots
+            % Linear interpolation of 'connected' map points
+            m = min(sqrt(map(:,1).^2 + map(:,2).^2));
+            d = m * sin(deg2rad(270/1081));
+            map = fillLidarData(map(1:skip:end,:), 270, d);
+
+            % Limit number of points in the map
+            I = randsample(size(map,1), min(size(map,1), 300));
+            %map = map(I,:);
+        end
+        
+        continue   
     end
     
     % Generate a local map from the world map
@@ -151,6 +169,17 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     end
     
     
+    if connectTheDots
+        % Linear interpolation of 'connected' scan points 
+        m = min(sqrt(scan(:,1).^2 + scan(:,2).^2));
+        d = m * sin(deg2rad(270/1081));
+        scan = fillLidarData(scan(1:skip:end,:), 270, d);
+
+        % Limit number of points in the map
+        I = randsample(size(scan,1), min(size(scan,1), 300));
+        scan = scan(I,:);
+    end
+    
     % Scan Matching Algo
     ScanMatch = tic;
     switch algo
@@ -158,15 +187,6 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             T = gicp(init_guess, scan(1:skip:end,:), map(1:skip:end,:), 'minMatchDist', 2, 'costThresh', .00001);
             
         case 1
-            % Linear interpolation of conncect points
-            m = min(sqrt(scan(:,1).^2 + scan(:,2).^2));
-            d = m * sin(deg2rad(270/1081));
-            scan = fillLidarData(scan(1:skip:end,:), 270, d);
-            
-            % Limit number of points in the map
-            I = randsample(size(scan,1), min(size(scan,1), 1000));
-            scan = scan(I,:);
-            
             
             % Low Resolution
             [ T, lookupTable_l ] = olson(init_guess, scan(1:skip:end,:), map(1:skip:end,:), ...
@@ -208,9 +228,11 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             fprintf(['\t' repmat('%g\t', 1, size(tmp, 2)) '\n'], tmp')
             fprintf('PSM: %d iterations with %g error\n', iter, err)
             
-        case 3  % Hill- Climbing
-                        
-            [ T, ogrid ] = hcm(init_guess, scan(1:end,:), map(1:end,:));
+        case 3  % Hill- Climbing                        
+            [T, ~    ] = hcm(init_guess, scan, map, 'pixelSize', 1);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', .3);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', .1);
+            %[T, ogrid] = hcm(T         , scan, map, 'pixelSize', .03);
             
     end
     fprintf('ScanMatcher: Scan %d matched in %.1f seconds. \n', scanIdx, toc(ScanMatch))
