@@ -48,7 +48,7 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
 
         
         % Naive Implemenation (AKA Dereck made it up....)
-        if 1
+        if 0
            % dont care about rotation right now.            
             %dt = sum(dM .* repmat((1-M)', 2, 1), 2);          
             %dt = sum(dM, 2) ./ sum((dM ~= 0), 2);          
@@ -101,7 +101,7 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
         
         
         % Paper Implementation
-        if 0
+        if 1
             
             for i = 1:N
                 x = scan(i,1);
@@ -127,7 +127,7 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
             for idx = 1:N
                 temp = temp + dM(:,idx)'*dS * (1 - M(idx));
             end
-            dt1 = H\temp';
+            dt = H\temp';
 
         
        
@@ -212,11 +212,10 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
     %          end        
     %          dt = inv(H) * temp';
 
-            dt2 = inv(H) * dTr;
+            dt = inv(H) * dTr;
 
         end
         
-        %dt = dt2 * .25;
         
         
         if isnan(dt)
