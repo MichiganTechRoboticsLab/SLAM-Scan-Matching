@@ -70,8 +70,7 @@ nScanIndex = unique(Lidar_ScanIndex);
 
 numberOfScans = 100000;
 start = 1;
-
-step = 10; % Scans
+step = 20; % Scans
 
 stop = start + step * numberOfScans;
 
@@ -85,34 +84,17 @@ T = [0 0 0];
 init_guess = [0 0 0];
 usePrevOffsetAsGuess = false;
 useScan2World = false;
+connectTheDots = true;
 
-% Create Figures
-if ~exist('figs','var') || isempty(figs)
-    global figs
-    figs = [];
-
-    figs(1) = figure;
-    figs(2) = figure;
-
-    switch algo
-        case 1
-            figs(3) = figure;
-            figs(4) = figure;
-        case 3
-            figs(3) = figure;
-        case 2
-            figs(3) = figure;
-            figs(4) = figure;
-            figs(5) = figure;
-            figs(6) = figure;
-    end
-
-end
 
 % Clear all figures before running
-for f = figs
-    change_current_figure(f)
-    cla
+for i = 1:8
+    if ~ishandle(i);
+    figure(i);
+    end
+    
+    change_current_figure(i);
+    clf;
 end
 % drawnow;
 pause(0.1);
@@ -147,7 +129,20 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         end
         world = tempMap;
         path = pose;
-        continue
+        
+        
+        if connectTheDots
+            % Linear interpolation of 'connected' map points
+            m = min(sqrt(map(:,1).^2 + map(:,2).^2));
+            d = m * sin(deg2rad(270/1081));
+            map = fillLidarData(map(1:skip:end,:), 270, d);
+
+            % Limit number of points in the map
+            I = randsample(size(map,1), min(size(map,1), 300));
+            %map = map(I,:);
+        end
+        
+        continue   
     end
 
     % Generate a local map from the world map
@@ -177,6 +172,17 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         I = randsample(size(map,1), min(size(map,1), 2000));
         map = map(I,:);
     end
+    
+    if connectTheDots
+        % Linear interpolation of 'connected' scan points 
+        m = min(sqrt(scan(:,1).^2 + scan(:,2).^2));
+        d = m * sin(deg2rad(270/1081));
+        scan = fillLidarData(scan(1:skip:end,:), 270, d);
+
+        % Limit number of points in the map
+        I = randsample(size(scan,1), min(size(scan,1), 300));
+        %scan = scan(I,:);
+    end
 
     % Scan Matching Algo
     ScanMatch = tic;
@@ -185,16 +191,6 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             T = gicp(init_guess, scan(1:skip:end,:), map(1:skip:end,:), 'minMatchDist', 2, 'costThresh', .00001);
 
         case 1
-            % Linear interpolation of conncect points
-            m = min(sqrt(scan(:,1).^2 + scan(:,2).^2));
-            d = m * sin(deg2rad(270/1081));
-            scan = fillLidarData(scan(1:skip:end,:), 270, d);
-
-            % Limit number of points in the map
-            I = randsample(size(scan,1), min(size(scan,1), 1000));
-            scan = scan(I,:);
-
-
             % Low Resolution
             [ T, lookupTable_l ] = olson(init_guess, scan(1:skip:end,:), map(1:skip:end,:), ...
                 'searchRadius', 4,                     ...
@@ -243,17 +239,18 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             T(3) = -T(3);
             fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
             fprintf('PSM: %d iterations with %g error\n', iter, err)
-
-        case 3  % Hill- Climbing
-
-            % Sensor pose for each point in the map for ray tracing.
-            poses = repmat([0 0], size(map, 1), 1);
-
-            [ T, ogrid ] = hcm(init_guess, scan(1:end,:), map(1:end,:), poses);
-
+            
+        case 3  % Hill- Climbing                        
+            searchStep = 0.5;
+            [T, ~    ] = hcm(init_guess, scan, map, 'pixelSize', searchStep);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 0.5);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 0.25);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 0.0625);
+            %[T, ogrid] = hcm(T         , scan, map, 'pixelSize', .03);
+            
     end
     fprintf('ScanMatcher: Scan %d matched in %.1f seconds. \n', scanIdx, toc(ScanMatch))
-
+    
     % Update current pose
     if useScan2World
         pose = T;
@@ -322,7 +319,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
 
 
     % Plot World
-    change_current_figure(figs(1));
+    change_current_figure(1);
     cla
     hold on
     plot(world(:,1), world(:,2), 'k.', 'MarkerSize', 1)
@@ -332,7 +329,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
 
 
     % Plot Transformed and Map and Scans
-    change_current_figure(figs(2));
+    change_current_figure(2);
     cla
     hold on
 
@@ -363,7 +360,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         case 1  % Olson
 
             % Low-resolution lookup table
-            change_current_figure(figs(3));
+            change_current_figure(3);
             cla
             imagesc(imrotate(lookupTable_l,90))
             colormap(bone)
@@ -371,14 +368,14 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             title(['Low-resolution lookup table, Scan: ' num2str(scanIdx)]);
 
             % High resolution lookup table
-            change_current_figure(figs(4));
+            change_current_figure(4);
             cla
             imagesc(imrotate(lookupTable_h,90))
             colormap(bone)
             axis equal
             title(['High-resolution lookup table, Scan: ' num2str(scanIdx)]);
         case 2  % PSM
-            change_current_figure(figs(3));
+            change_current_figure(3);
             cla
 
             iters = 1:iter;
@@ -405,7 +402,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         case 3  % Hill Climbing
 
             % Occupancy Grid
-            change_current_figure(figs(3));
+            change_current_figure(3);
             cla
             imagesc(imrotate(ogrid.grid,90))
             axis equal

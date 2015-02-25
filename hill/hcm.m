@@ -1,26 +1,27 @@
-function [ T, ogrid ] = hcm( guess, scan, map, poses, varargin)
+function [ T, ogrid ] = hcm( guess, scan, map, varargin)
 %HCM Hill-climbing scan matcher
 %   Detailed explanation goes here
 
 
     % Read optional parameters
     p = inputParser;
-    p.addParameter('pixelSize', .3, @(x)isnumeric(x));
+    p.addParameter('pixelSize', 1, @(x)isnumeric(x));
     p.parse(varargin{:})
 
     pixelSize = p.Results.pixelSize;
 
     
     % Initial values
-    T = guess;
+    T(1,:) = guess;
     
-    ogrid = oGrid(map, poses, pixelSize);
+    ogrid = oGrid(map, [], pixelSize);
     
-    for iter = 1:100
+    maxIterations = 20;
+    for iter = 1:maxIterations
         % Gauss-Newton gradient Decent
 
         % (eq 7) Current transform between map and scan
-        e = T';
+        e = T(iter,:)';
 
         % (eq 8) Scan points transformed to current estimate
         theta = e(3);
@@ -37,9 +38,7 @@ function [ T, ogrid ] = hcm( guess, scan, map, poses, varargin)
 
         % (eq 9) Error function for current pose
         err(iter) = sum(1 - M);
-        %if iter > 1 && err(iter-1) < err(iter)
-        %    break
-        %end
+
 
         % (eq 13) H matrix
         [dx, dy] = ogrid_gradient( ogrid, S' );
@@ -47,109 +46,230 @@ function [ T, ogrid ] = hcm( guess, scan, map, poses, varargin)
 
         N = size(scan,1);
 
-        for i = 1:N
-            x = scan(i,1);
-            y = scan(i,2);
-            w = T(3);
-
-            dS = [1 0 -sin(w) * x + cos(w)*y;
-                  0 1  cos(w) * x - sin(w)*y]; 
-
-            h(i, :) = dM(:,i)' * dS;
-        end
-
-        H = h'*h;
         
-        %check if the matrix is singular
-        if rcond(H) < 1e-12
-            warning('singular matrix detected')
-            break;
+        % Naive Implemenation (AKA Dereck made it up....)
+        if 1
+           % dont care about rotation right now.            
+            %dt = sum(dM .* repmat((1-M)', 2, 1), 2);          
+            %dt = sum(dM, 2) ./ sum((dM ~= 0), 2);          
+            dt = sum(dM, 2); 
+            dt(1) = dt(1) / sum(dM(1,:) ~= 0);
+            dt(2) = dt(2) / sum(dM(2,:) ~= 0);
+            
+            
+            % Find dTheta
+            
+            % Convert scan points to polar
+            [a1, d1]  = cart2pol(S(1,:), S(2,:));
+            
+            % Convert gradients to polar
+            [a2, d2]  = cart2pol(dM(1,:), dM(2,:));
+            
+            % Remove no rotation elements.
+            I = d2 < 0.1;
+            a1(I) = [];
+            d1(I) = [];
+            a2(I) = [];
+            d2(I) = [];
+            
+            % rotate all gradients to one axis.
+            d3 = d2;
+            a3 = a2 - a1;       
+                        
+            % Find Rotation forces
+            %rf = sin(a3) .* d3 ./ d2 * pixelSize;
+            
+            [x, ~] = pol2cart(a3, d3);
+            
+            % Find Mean of rotations
+            mrf = mean(x / d1 * pixelSize);
+                     
+            
+            % Set rotation
+            dt(3) = asin(mrf)*0.5;
+            dt(3) = 0;
+            
+            % Fix div zeros
+            dt(isnan(dt)) = 0;
+            
+            % Simulated annealing
+            temp = (maxIterations-(iter/2))/(maxIterations);
+            dt = dt * temp;
         end
+        
+        
+        
+        
+        % Paper Implementation
+        if 0
+            
+            for i = 1:N
+                x = scan(i,1);
+                y = scan(i,2);
+                w = T(3);
+
+                dS = [1 0 -sin(w) * x + cos(w)*y;
+                      0 1  cos(w) * x - sin(w)*y]; 
+
+                h(i, :) = dM(:,i)' * dS;
+            end
+
+            H = h'*h;
+
+            %check if the matrix is singular
+            if rcond(H) < 1e-12
+                warning('singular matrix detected')
+                break;
+            end
+
+            % (eq 12) Minimization function
+            temp = zeros(1,3);
+            for idx = 1:N
+                temp = temp + dM(:,idx)'*dS * (1 - M(idx));
+            end
+            dt1 = H\temp';
+
+        
+       
+        end
+        
+        if 0
+
+
+    %         >> C++ Implementation: http://goo.gl/PLE2Ie
+
+    %       Eigen::Affine2f transform(getTransformForState(pose));
+    % 
+    %       float sinRot = sin(pose[2]);
+            sinRot = sin(e(3));
+    %       float cosRot = cos(pose[2]);
+            cosRot = cos(e(3));
+    % 
+    %       H = Eigen::Matrix3f::Zero();
+            H = zeros(3,3);
+    %       dTr = Eigen::Vector3f::Zero();
+            dTr = zeros(3,1);
+
+    %       for (int i = 0; i < size; ++i) {   
+            for i = 1:N
+    % 
+    %           const Eigen::Vector2f& currPoint (dataPoints.getVecEntry(i));
+                currPoint = scan(i,:);
+    % 
+    %           Eigen::Vector3f transformedPointData(interpMapValueWithDerivatives(transform * currPoint));
+                transformedPointData(1)   = M(i);
+                transformedPointData(2:3) = dM(:, i);
+    % 
+    %           float funVal = 1.0f - transformedPointData[0];
+                funVal = 1 - transformedPointData(1);
+    % 
+    %           dTr[0] += transformedPointData[1] * funVal;
+    %           dTr[1] += transformedPointData[2] * funVal;
+                dTr(1) = dTr(1) + transformedPointData(2) * funVal;
+                dTr(2) = dTr(2) + transformedPointData(3) * funVal;
+    % 
+    %           float rotDeriv = ((-sinRot * currPoint.x() - cosRot * currPoint.y()) * transformedPointData[1] + (cosRot * currPoint.x() - sinRot * currPoint.y()) * transformedPointData[2]);
+                rotDeriv = (-sinRot * currPoint(1) - cosRot * currPoint(2)) * transformedPointData(2) + (cosRot * currPoint(1) - sinRot * currPoint(2)) * transformedPointData(3);
+                rotDeriv = 500;
+
+    % 
+    %           dTr[2] += rotDeriv * funVal;
+                dTr(3) = dTr(3) + rotDeriv * funVal;
+    % 
+    %           H(0, 0) += util::sqr(transformedPointData[1]);
+    %           H(1, 1) += util::sqr(transformedPointData[2]);
+    %           H(2, 2) += util::sqr(rotDeriv);
+                H(1, 1) = H(1, 1) + transformedPointData(2)^2;
+                H(2, 2) = H(2, 2) + transformedPointData(3)^2;
+                H(3, 3) = H(3, 3) + rotDeriv^2;
+    % 
+    %           H(0, 1) += transformedPointData[1] * transformedPointData[2];
+    %           H(0, 2) += transformedPointData[1] * rotDeriv;
+    %           H(1, 2) += transformedPointData[2] * rotDeriv;
+                H(1, 2) = H(1, 2) + transformedPointData(2) * transformedPointData(3);
+                H(1, 3) = H(1, 3) + transformedPointData(2) * rotDeriv;
+                H(2, 3) = H(2, 3) + transformedPointData(3) * rotDeriv;
+
+    %         }
+       
+        % 
+        %       H(1, 0) = H(0, 1);
+        %       H(2, 0) = H(0, 2);
+        %       H(2, 1) = H(1, 2);
+                H(2, 1) = H(1, 2);
+                H(3, 1) = H(1, 3);
+                H(3, 2) = H(2, 3); 
+
+            end
+        
         
         % (eq 12) Minimization function
-        temp = zeros(1,3);
-        for idx = 1:N
-            temp = temp + dM(:,idx)'*dS * (1 - M(idx));
+    %         dt2 = inv(H) * sum(h, 1)' * err(itter);
+    %         
+    %          temp = zeros(1,3);
+    %          for idx = 1:N
+    %              temp = temp + dM(:,idx)' * dS * (1 - M(idx));
+    %          end        
+    %          dt = inv(H) * temp';
+
+            dt2 = inv(H) * dTr;
+
         end
-        dt = H\temp';
+        
+        %dt = dt2 * .25;
+        
+        
+        if isnan(dt)
+            break;
+        end
+
+        % Restrict angular search
+        dt(3) = min(dt(3),  0.2);
+        dt(3) = max(dt(3), -0.2);
+           
+        
 
         % convert to meters
         dt(1) = dt(1) * pixelSize;
         dt(2) = dt(2) * pixelSize;
 
+        
         % Move in the direction of the gradient
         % T = guess + dt';
-        T = T + dt'
-        T(3) = T(3) - dt(3);
+        T(iter + 1, :) = T(iter, :) + dt';
+        T(iter + 1, 3) = T(iter, 3) + dt(3);
+        
         
         % DEBUGGING ONLY %
-        % T(3) = 0
-        % Debug plot
-        plotItteration( 3, ogrid, map, scan, T )
+
+        %fprintf('dt = %.4f %.4f %.4f\n', dt(1), dt(2), rad2deg(dt(3)) )
+        
+        %plotItteration( 4, ogrid, map, scan, T(iter+1,:), err )
+        
+        
+        % Convergence Criteria
+        %if sum(dt) < 0.0001 
+        %    break
+        %end
     end
     
-    % DEBUGGING ONLY %
-    % T(3) = 0
-    
-    % return
-  
-    % Subpixel and gradient function debug plots
-    divby = 10;
-    
-    % Generate a mesh of points that are finer than the original grid
-    xi = (ogrid.minX : ogrid.pixelSize/divby : ogrid.maxX);
-    yi = (ogrid.minY : ogrid.pixelSize/divby : ogrid.maxY);
-    [xj, yj] = meshgrid(xi, yi);
-    
-    % convert the mesh into a list of points
-    pts = [reshape(xj,size(xj,1) * size(xj,2), 1) reshape(yj,size(yj,1) * size(yj,2), 1)];
-    
-    % Filter the grid at a higher resolution
-    v        = ogrid_subpixel( ogrid, pts );
-    [dx, dy] = ogrid_gradient( ogrid, pts );
-   
-    
-    % Put the data back into a matrix
-    v  = reshape(v, length(yi), length(xi))';
-    dx = reshape(dx, length(yi), length(xi))';
-    dy = reshape(dy, length(yi), length(xi))';
-    
-    
-    % Plot the result
-    
-    map_x = (map(:,1) - ogrid.minX) / (ogrid.maxX - ogrid.minX + ogrid.pixelSize/divby) * size(v, 1);
-    map_y = (map(:,2) - ogrid.minY) / (ogrid.maxY - ogrid.minY + ogrid.pixelSize/divby) * size(v, 2);
-   
-    
-    figure(4)
-    clf
-    imagesc(imrotate(v,0))
-    axis equal
-    colormap(bone);
-    title('Bilinear filter-d Occupancy Grid');
-    hold on;
-    plot(map_y, map_x, '.r');
-    
-    
-    figure(5)
-    clf
-    imagesc(imrotate(dx,0))
-    axis equal
-    colormap(bone);
-    title('dx');
-    hold on;
-    plot(map_y, map_x, '.r');
-    
-    figure(6)
-    clf
-    imagesc(imrotate(dy,0))
-    axis equal
-    colormap(bone);
-    title('dy');
-    hold on;
-    plot(map_y, map_x, '.r');
 
-
+    % Calculate score for final iteration
+    e = T(end,:)';
+    theta = e(3);
+    m = [cos(theta) -sin(theta);
+         sin(theta)  cos(theta)] ;
+    S = m * scan' + repmat( e(1:2), 1, size(scan,1)) ;
+    M = ogrid_subpixel(ogrid, S');
+    M(isnan(M)) = 0;
+    err(end) = sum(1 - M);
+    
+    
+    % Select best transform for solution
+    [~,I] = min(err);
+    T = T(I,:);
+    
+ 
+    %plotItteration( 4, ogrid, map, scan, T, err )
     
 end
-
