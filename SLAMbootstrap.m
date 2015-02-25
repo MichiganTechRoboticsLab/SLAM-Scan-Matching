@@ -78,7 +78,7 @@ world = [];
 T = [0 0 0];
 init_guess = [0 0 0];
 usePrevOffsetAsGuess = false;
-useScan2World = true;
+useScan2World = false;
 connectTheDots = true;
 
 
@@ -177,7 +177,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
 
         % Limit number of points in the map
         I = randsample(size(scan,1), min(size(scan,1), 300));
-        scan = scan(I,:);
+        %scan = scan(I,:);
     end
     
     % Scan Matching Algo

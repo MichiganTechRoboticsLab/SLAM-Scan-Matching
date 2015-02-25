@@ -46,14 +46,51 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
 
         N = size(scan,1);
 
+        
         % Naive Implemenation (AKA Dereck made it up....)
         if 1
            % dont care about rotation right now.            
+            %dt = sum(dM .* repmat((1-M)', 2, 1), 2);          
+            %dt = sum(dM, 2) ./ sum((dM ~= 0), 2);          
             dt = sum(dM, 2); 
             dt(1) = dt(1) / sum(dM(1,:) ~= 0);
             dt(2) = dt(2) / sum(dM(2,:) ~= 0);
+            
+            
+            % Find dTheta
+            
+            % Convert scan points to polar
+            [a1, d1]  = cart2pol(S(1,:), S(2,:));
+            
+            % Convert gradients to polar
+            [a2, d2]  = cart2pol(dM(1,:), dM(2,:));
+            
+            % Remove no rotation elements.
+            I = d2 < 0.1;
+            a1(I) = [];
+            d1(I) = [];
+            a2(I) = [];
+            d2(I) = [];
+            
+            % rotate all gradients to one axis.
+            d3 = d2;
+            a3 = a2 - a1;       
+                        
+            % Find Rotation forces
+            %rf = sin(a3) .* d3 ./ d2 * pixelSize;
+            
+            [x, ~] = pol2cart(a3, d3);
+            
+            % Find Mean of rotations
+            mrf = mean(x / d1 * pixelSize);
+                     
+            
+            % Set rotation
+            dt(3) = asin(mrf)*0.5;
             dt(3) = 0;
             
+            % Fix div zeros
+            dt(isnan(dt)) = 0;
             
             % Simulated annealing
             temp = (maxIterations-(iter/2))/(maxIterations);
@@ -155,15 +192,15 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
 
     %         }
        
-    % 
-    %       H(1, 0) = H(0, 1);
-    %       H(2, 0) = H(0, 2);
-    %       H(2, 1) = H(1, 2);
-            H(2, 1) = H(1, 2);
-            H(3, 1) = H(1, 3);
-            H(3, 2) = H(2, 3); 
-        
-        end
+        % 
+        %       H(1, 0) = H(0, 1);
+        %       H(2, 0) = H(0, 2);
+        %       H(2, 1) = H(1, 2);
+                H(2, 1) = H(1, 2);
+                H(3, 1) = H(1, 3);
+                H(3, 2) = H(2, 3); 
+
+            end
         
         
         % (eq 12) Minimization function
