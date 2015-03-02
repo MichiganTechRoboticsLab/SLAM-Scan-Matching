@@ -1,51 +1,55 @@
+
 clc
 
 if (~exist('init','var') || init == false)
     if (exist('useSimWorld','var') && useSimWorld == true)
         Lidar_Ranges = Test_Lidar_Ranges;
+        Lidar_Ranges = Lidar_Ranges + normrnd(0, .001, size(Test_Lidar_Ranges,1),1);
+
         Lidar_ScanIndex = Test_Lidar_ScanIndex;
         Lidar_Angles = Test_Lidar_Angles;
         [Lidar_X, Lidar_Y] = pol2cart(Lidar_Angles, Lidar_Ranges);
     else
+        useSimWorld = false;
         % Grab range measurements from Lidar data (First Echo)
         I = 3:6:6484;
         Lidar_Ranges = Lidar_Log(:, I);
-        
+
         % System Timestamp
         Lidar_Timestamp_System = Lidar_Log(:, 1);
-        
+
         % Sensor Timestamp
         Lidar_Timestamp_Sensor = Lidar_Log(:, 2) / 1000;
-        
+
         % Combined Timestamp
         Lidar_Timestamp = Lidar_Timestamp_System(1) - Lidar_Timestamp_Sensor(1) + Lidar_Timestamp_Sensor;
-        
+
         % Scan Index
         Lidar_ScanIndex = (1:Lidar_ScanCount)';
-        
+
         % Angles for each measurement
         % Rotated the lidar data to face the Y-Axis
         da = (Lidar_AngleEnd - Lidar_AngleStart) / (Lidar_nPoints - 1);
         Lidar_Angles = (Lidar_AngleStart:da:Lidar_AngleEnd)' + pi/2;
-        
-        
+
+
         % Copy each col vector across for each measurement
         Lidar_Timestamp = repmat(Lidar_Timestamp, 1, Lidar_nPoints);
         Lidar_ScanIndex = repmat(Lidar_ScanIndex, 1, Lidar_nPoints);
         Lidar_Angles    = repmat(Lidar_Angles', Lidar_ScanCount, 1);
-        
+
         % Reformat the data so there is one measurement per row
         Lidar_Ranges = reshape(Lidar_Ranges', [], 1);
         Lidar_Timestamp = reshape(Lidar_Timestamp', [], 1);
         Lidar_ScanIndex = reshape(Lidar_ScanIndex', [], 1);
         Lidar_Angles = reshape(Lidar_Angles', [], 1);
-        
-        
+
+
         % Convert from mm to meters
         Lidar_Ranges = Lidar_Ranges / 1000;
         switch algo
             case 2
-                fprintf('Data is ready for PSM\n')
+                fprintf('ScanMatcher: Data is ready for PSM\n')
             otherwise
                 % Remove invalid range data (Too close or too far)
                 I = Lidar_Ranges < 0.75 | Lidar_Ranges > 30;
@@ -67,6 +71,7 @@ nScanIndex = unique(Lidar_ScanIndex);
 numberOfScans = 100000;
 start = 180;
 step = 20; % Scans
+
 stop = start + step * numberOfScans;
 
 skip = 1; % Points
@@ -91,17 +96,17 @@ for i = 1:8
     change_current_figure(i);
     clf;
 end
-drawnow;
+% drawnow;
 pause(0.1);
 
 
 % Scan Matching Loop
 startTime = tic;
 for scanIdx = start:step:min(stop,size(nScanIndex,1))
-    
+
     % Display current scan index
-    fprintf('Scan %d\n', scanIdx);
-    
+    fprintf('ScanMatcher: Scan %d\n', scanIdx);
+
     % Get Current Scan
     switch algo
         case 2
@@ -109,7 +114,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         otherwise
             scan = getLidarXY(scanIdx, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex);
     end
-    
+
     % Init World
     if isempty(map)
         % Init map and world
@@ -139,35 +144,34 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         
         continue   
     end
-    
+
     % Generate a local map from the world map
     if useScan2World
-        
+
         % Translate current scan to map coordinates
         dx    = pose(1);
         dy    = pose(2);
         theta = -pose(3);
-        
+
         M = [ cos(theta) -sin(theta) dx;
             sin(theta)  cos(theta) dy;
             0           0  1];
-        
+
         scanWorldFrame = [scan(1:skip:end,:) ones(size(scan,1), 1)];
         scanWorldFrame = scanWorldFrame(1:skip:end,:) * M';
         scanWorldFrame = scanWorldFrame(:,[1,2]);
-        
+
         % extract points around the current scan for a reference map
         borderSize = 1; % (Meters)
         map = map(map(:,1) > min(scanWorldFrame(:,1)) - borderSize, :);
         map = map(map(:,1) < max(scanWorldFrame(:,1)) + borderSize, :);
         map = map(map(:,2) > min(scanWorldFrame(:,2)) - borderSize, :);
         map = map(map(:,2) < max(scanWorldFrame(:,2)) + borderSize, :);
-        
+
         % Limit number of points in the map
         I = randsample(size(map,1), min(size(map,1), 2000));
         map = map(I,:);
     end
-    
     
     if connectTheDots
         % Linear interpolation of 'connected' scan points 
@@ -179,15 +183,14 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         I = randsample(size(scan,1), min(size(scan,1), 300));
         %scan = scan(I,:);
     end
-    
+
     % Scan Matching Algo
     ScanMatch = tic;
     switch algo
         case 0
             T = gicp(init_guess, scan(1:skip:end,:), map(1:skip:end,:), 'minMatchDist', 2, 'costThresh', .00001);
-            
+
         case 1
-            
             % Low Resolution
             [ T, lookupTable_l ] = olson(init_guess, scan(1:skip:end,:), map(1:skip:end,:), ...
                 'searchRadius', 4,                     ...
@@ -199,8 +202,8 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
                 'xRange', 1 * step / 50,         ...
                 'yRange', 1 * step / 50,         ...
                 'pixelSize', 0.1);
-            
-            
+
+
             % High Resolution
             [ T, lookupTable_h ] = olson(T, scan(1:skip:end,:), map(1:skip:end,:), ...
                 'searchRadius', 4,                     ...
@@ -212,20 +215,29 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
                 'xRange', 0.2 * step / 50,         ...
                 'yRange', 0.2 * step / 50,         ...
                 'pixelSize', 0.03);
-            
-            
-            fprintf('OLSON: Final Guess\n')
+
+
+            fprintf('OLSON: Final Guess: ')
             tmp = T;
             tmp(3) = rad2deg(tmp(3));
-            fprintf(['\t' repmat('%g\t', 1, size(tmp, 2)) '\n'], tmp')
-            
+            fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
+
         case 2
-            [ T, iter, err] = psm(init_guess, scan(1:skip:end,:), map(1:skip:end,:));
-            T(3) = -T(3);
-            fprintf('PSM: Final Guess\n')
+            [ T, iter, err, dxs, dys, dths, errs ] = psm(init_guess, scan(1:skip:end,:), map(1:skip:end,:), ...
+                'PM_STOP_COND', .4,                                               ...
+                'PM_MAX_ITER', 90,                                                   ...
+                'PM_MAX_RANGE', 3000,                                                  ...
+                'PM_MIN_RANGE', 10,                                                  ...
+                'PM_WEIGHTING_FACTOR', 30*30,                                        ...
+                'PM_SEG_MAX_DIST', 20,                                               ...
+                'PM_CHANGE_WEIGHT_ITER', 10,                                         ...
+                'PM_MAX_ERR', 30,                                                    ...
+                'PM_SEARCH_WINDOW', 200);
+            fprintf('PSM: Final Guess: ')
             tmp = T;
             tmp(3) = rad2deg(tmp(3));
-            fprintf(['\t' repmat('%g\t', 1, size(tmp, 2)) '\n'], tmp')
+            T(3) = -T(3);
+            fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
             fprintf('PSM: %d iterations with %g error\n', iter, err)
             
         case 3  % Hill- Climbing                        
@@ -239,7 +251,6 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     end
     fprintf('ScanMatcher: Scan %d matched in %.1f seconds. \n', scanIdx, toc(ScanMatch))
     
-    
     % Update current pose
     if useScan2World
         pose = T;
@@ -250,12 +261,23 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             sin(theta)  cos(theta), 0;
             0           0           1];
         mapT  = T * Trans;
-        
+
         % Add previous scan to pose
         pose = pose + [mapT(1:2), -T(3)];
     end
+    fprintf('ScanMatcher: Scan %d pose is ', scanIdx);
+    tmp = pose;
+    tmp(3) = rad2deg(tmp(3));
+    fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
+    if(useSimWorld)
+        goodPose = LidarPose(scanIdx,1:3);
+        tmp = goodPose;
+        tmp(3) = rad2deg(tmp(3));
+        fprintf('ScanMatcher: Scan %d pose should be ', scanIdx);
+        fprintf(['[ ' repmat('%g ', 1, size(goodPose, 2)-1) '%g ]\n'], goodPose')
+    end
     path(end+1,:) = pose;
-    
+
     % Make Sure Scan in proper Coordinates
     tempScan = [];
     switch algo
@@ -265,18 +287,18 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         otherwise
             tempScan = scan;
     end
-    
+
     % Current World Pose Transform
     dx = pose(1);
     dy = pose(2);
     theta = pose(3);
-    
+
     Trans = [ cos(theta) -sin(theta) dx;
         sin(theta)  cos(theta) dy;
         0           0  1];
     temp = [tempScan ones(size(tempScan,1),1)] * Trans';
-    
-    
+
+
     % Current Scan Transformation
     dx = T(1);
     dy = T(2);
@@ -285,17 +307,17 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         sin(theta)  cos(theta) dy;
         0           0  1];
     tempL = [tempScan ones(size(tempScan,1),1)] * LTrans';
-    
-    
+
+
     % Add transformed data to world
     if useScan2World
         world = [world; tempL(:,1:2)];
     else
         world = [world; temp(:,1:2)];
     end
-    
-    
-    
+
+
+
     % Plot World
     change_current_figure(1);
     cla
@@ -304,13 +326,13 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     plot(path(:,1), path(:,2), 'r.')
     axis equal
     title(['Scan: ' num2str(scanIdx)]);
-    
-    
+
+
     % Plot Transformed and Map and Scans
     change_current_figure(2);
     cla
     hold on
-    
+
     tempMap = [];
     switch algo
         case 2
@@ -319,7 +341,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         otherwise
             tempMap = map;
     end
-    
+
     plot(tempMap(:,1),tempMap(:,2),'r.')
     if useScan2World
         plot(scanWorldFrame(:,1),scanWorldFrame(:,2),'b.')
@@ -331,12 +353,12 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     axis equal
     title(['Scan: ' num2str(scanIdx)]);
     legend('Reference', 'Current Scan', 'Registered Scan')
-    
-    
+
+
     % Algorithm specific plots
     switch algo
         case 1  % Olson
-            
+
             % Low-resolution lookup table
             change_current_figure(3);
             cla
@@ -344,17 +366,41 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             colormap(bone)
             axis equal
             title(['Low-resolution lookup table, Scan: ' num2str(scanIdx)]);
-            
+
             % High resolution lookup table
-            change_current_figure(figs(4));
+            change_current_figure(4);
             cla
             imagesc(imrotate(lookupTable_h,90))
             colormap(bone)
             axis equal
             title(['High-resolution lookup table, Scan: ' num2str(scanIdx)]);
-            
+        case 2  % PSM
+            change_current_figure(3);
+            cla
+
+            iters = 1:iter;
+            subplot(3,1,1);
+            curticks = get(gca, 'XTick');
+            set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+            plot(iters, abs(dxs(1:end)), 'o-');
+            axis tight
+            title('Evolution of X');
+            subplot(3,1,2);
+            curticks = get(gca, 'XTick');
+            set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+            plot(iters, abs(dys(1:end)), 's-');
+            axis tight
+            title('Evolution of Y');
+            subplot(3,1,3);
+            curticks = get(gca, 'XTick');
+            set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+            plot(iters, abs(rad2deg(dths(1:end))),'x-');
+            axis tight
+            title('Evolution of Ө');
+            axis tight
+
         case 3  % Hill Climbing
-            
+
             % Occupancy Grid
             change_current_figure(3);
             cla
@@ -362,16 +408,16 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             axis equal
             colormap([1 1 1; 0.5 0.5 0.5; 0 0 0]);
     end
-    
-    
-    
+
+
+
     % Select the map for the next scan
     if useScan2World
         map = world;
     else
         map = scan;
     end
-    
+
     % Set next search starting location
     if useScan2World
         if usePrevOffsetAsGuess
@@ -384,10 +430,11 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             init_guess = T;
         end
     end
-    
-    
+
+
     drawnow
     pause(.1)
 end
 
 toc(startTime)
+

@@ -1,4 +1,5 @@
 clear
+close all
 
 % Load sensor dataset
 load('../datasets/hallroomvn.mat')
@@ -14,5 +15,7 @@ addpath( wd, [wd '/GICP'], [wd '/Olson'], [wd '/PSM'], [wd '/hill'], [wd '/util'
 % 2: PSM 
 % 3: Hill-Climbing
 
-algo = 3;
+algo = 2;
 
+
+useSimWorld = true;

@@ -29,7 +29,7 @@ function [scan, newR, newBad] = projectScan(scan)
             occluded = false;
             j0 = 0; j1 = 0; r0 = 0; r1 = 0; a0 = 0; a1 = 0;
             if(fi(i) - fi(i-1) >= pi)
-                continue;
+%                 continue;
             end
             if( fi(i) > fi(i-1) )
                 occluded = false;
@@ -55,7 +55,8 @@ function [scan, newR, newBad] = projectScan(scan)
                     newR(j0) = ri;
                     newBad(j0) = bitset(newBad(j0),PM_EMPTY,0 );
                     newBad(j0) = bitset(newBad(j0),PM_OCCLUDED, occluded );
-
+                    newBad(j0) = bitor(newBad(j0), scan.bad(i));
+                    newBad(j0) = bitor(newBad(j0), scan.bad(i-1));
                 end
                 j0 = j0 + 1;
             end
