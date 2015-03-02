@@ -83,18 +83,16 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
             
             % Find Mean of rotations
             mrf = mean(x / d1 * pixelSize);
-                     
             
             % Set rotation
             dt(3) = asin(mrf)*0.5;
+            
+            % dTheta code isn't working yet.... 
             dt(3) = 0;
             
             % Fix div zeros
             dt(isnan(dt)) = 0;
             
-            % Simulated annealing
-            temp = (maxIterations-(iter/2))/(maxIterations);
-            dt = dt * temp;
         end
         
         
@@ -102,19 +100,20 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
         
         % Paper Implementation
         if 1
-            
+            H = zeros(3,3);
+            w = T(3);
             for i = 1:N
                 x = scan(i,1);
                 y = scan(i,2);
-                w = T(3);
 
-                dS = [1 0 -sin(w) * x + cos(w)*y;
-                      0 1  cos(w) * x - sin(w)*y]; 
+                dS = [1 0 -sin(w) * x - cos(w) * y;
+                      0 1  cos(w) * x - sin(w) * y]; 
 
-                h(i, :) = dM(:,i)' * dS;
+                h = dM(:,i)' * dS;
+                
+                H = H + (h' * h);
             end
 
-            H = h'*h;
 
             %check if the matrix is singular
             if rcond(H) < 1e-12
@@ -123,19 +122,27 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
             end
 
             % (eq 12) Minimization function
-            temp = zeros(1,3);
+            tmp = zeros(3,1);
             for idx = 1:N
-                temp = temp + dM(:,idx)'*dS * (1 - M(idx));
-            end
-            dt = H\temp';
+                x = scan(i,1);
+                y = scan(i,2);
 
-        
-       
+                dS = [1 0 -sin(w) * x - cos(w) * y;
+                      0 1  cos(w) * x - sin(w) * y]; 
+
+                h = dM(:,i)' * dS;
+                
+                %tmp = tmp + dM(:,idx)'*dS * (1 - M(idx));
+                tmp = tmp + h' * (1 - M(idx));
+            end
+            dt = H \ tmp;
+            
         end
         
+        
+
+
         if 0
-
-
     %         >> C++ Implementation: http://goo.gl/PLE2Ie
 
     %       Eigen::Affine2f transform(getTransformForState(pose));
@@ -212,7 +219,7 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
     %          end        
     %          dt = inv(H) * temp';
 
-            dt = inv(H) * dTr;
+            dt = H \ dTr;
 
         end
         
@@ -221,33 +228,37 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
         if isnan(dt)
             break;
         end
-
+        
+        
+        % Simulated annealing
+        if 0
+            temp = (maxIterations-(iter/2))/(maxIterations);
+            dt = dt * temp;
+        end
+        
         % Restrict angular search
         dt(3) = min(dt(3),  0.2);
         dt(3) = max(dt(3), -0.2);
-           
-        
 
         % convert to meters
         dt(1) = dt(1) * pixelSize;
         dt(2) = dt(2) * pixelSize;
-
         
         % Move in the direction of the gradient
         % T = guess + dt';
         T(iter + 1, :) = T(iter, :) + dt';
-        T(iter + 1, 3) = T(iter, 3) + dt(3);
+        %T(iter + 1, 3) = T(iter, 3) + dt(3);
         
         
         % DEBUGGING ONLY %
 
-        %fprintf('dt = %.4f %.4f %.4f\n', dt(1), dt(2), rad2deg(dt(3)) )
+        fprintf('dt = %.4f %.4f %.4f\n', dt(1), dt(2), rad2deg(dt(3)) )
         
-        %plotItteration( 4, ogrid, map, scan, T(iter+1,:), err )
+        plotItteration( 4, ogrid, map, scan, T(iter+1,:), err )
         
         
         % Convergence Criteria
-        %if sum(dt) < 0.0001 
+        %if sum(abs(dt)) > 0.0001
         %    break
         %end
     end
