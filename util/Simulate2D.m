@@ -5,19 +5,21 @@
 % Generate the virtual world (Ground Truth Map)
 %
 
+% Sensor Parameters
+Lidar_AngleStart = -2.3562;
+Lidar_AngleEnd   =  2.3562;
+
+% Number of points per scan
+Lidar_nPoints = 1081;
+
 % W is an array of objects in the map
 % Each object is a polyline stored in a 2xn matrix
 % Where n is the number of line endpoints
 % the first row is the x coordinates
 % the second row is the y coordinates.
-World{1} = [0 0 5 5 0;
-    0 5 5 0 0];
+World{1} = [-3 -3 3 3;
+    0  5 5 0];
 
-World{2} = [1 1 2 2 1;
-    1 3 3 1 1];
-
-World{3} = [3 4 4 3 3;
-    3 3 4 4 3];
 
 % Plot the world
 figure(1);
@@ -37,13 +39,11 @@ grid
 
 % Robot Trajectory
 % [x, y, Theta]
-Path = [0.5, 0.5, deg2rad(0);
-    0.5, 4.0, deg2rad(0);
-    0.5, 4.0, deg2rad(-90);
-    2.5, 4.0, deg2rad(-90)];
+Path = [0, 0, deg2rad(0);
+    1, -1 , deg2rad(-15)];
 
-PathVelLin = 0.5;  % Linear Velocity (Units/Second)
-PathVelRot = deg2rad(45); % Rotational velocity (Rad/Second)
+PathVelLin = sqrt(2);  % Linear Velocity (Units/Second)
+PathVelRot = deg2rad(15); % Rotational velocity (Rad/Second)
 
 % Plot Trajectory
 figure(1);
@@ -52,7 +52,7 @@ plot(Path(:,1)', Path(:,2)', '-r');
 
 % Generate timestamps for each trajectory vertex
 tt = 0;
-for i = 1:(length(Path)-1)
+for i = 1:(size(Path,1)-1)
     dp = sqrt((Path(i,1) - Path(i+1,1))^2 + (Path(i,2) - Path(i+1,2))^2);
     tp = dp/PathVelLin;
     
@@ -69,12 +69,12 @@ Path = cat(2, Path, tt');
 % Generate Lidar Data
 %
 
-LidarHz = 40; % Samples Per Second
+LidarHz = 1; % Samples Per Second
 
 % lidar poses
 LidarPose = [];
 
-for i = 1:(length(Path)-1)
+for i = 1:(size(Path,1)-1)
     x  = [0; tt(i+1)];
     xx = x(1):1/LidarHz:x(2);
     
@@ -91,16 +91,18 @@ for i = 1:(length(Path)-1)
 end
 
 plot(LidarPose(:,1),LidarPose(:,2), '.r');
-
+for i = 1:size(LidarPose,1)
+    plot([LidarPose(i,1), LidarPose(i,1) + cos(LidarPose(i,3))], [LidarPose(i,2),LidarPose(i,2)+ sin(LidarPose(i,3))], '.g-');
+end
 
 if 1
     % Generate Lidar Sensor measurements
-    LidarRange = 30.0;
+    LidarRange = 60.0;
     da = (Lidar_AngleEnd - Lidar_AngleStart) / (Lidar_nPoints - 1);
     LidarAngles = (Lidar_AngleStart:da:Lidar_AngleEnd) + pi/2;
     LidarScan = zeros(size(LidarPose,1), size(LidarAngles,2));
     
-    parfor n = 1:size(LidarPose,1) % For each pose
+    for n = 1:size(LidarPose,1) % For each pose
         p = LidarPose(n,:); % Current pose
         z = []; % Current scan
         
@@ -131,11 +133,22 @@ if 1
         
         LidarScan(n,:) = z;
     end
+    Test_Lidar_Angles = LidarAngles;
+    Test_Lidar_ScanCount = size(LidarScan,1);
+    Test_Lidar_ScanIndex = (1:Test_Lidar_ScanCount)';
+    
+    Test_Lidar_ScanIndex = repmat(Test_Lidar_ScanIndex, 1, Lidar_nPoints);
+    Test_Lidar_Angles    = repmat(Test_Lidar_Angles, Test_Lidar_ScanCount, 1);
+    
+    Test_Lidar_Ranges = reshape(LidarScan',[],1);
+    Test_Lidar_ScanIndex = reshape(Test_Lidar_ScanIndex',[],1);
+    Test_Lidar_Angles = reshape(Test_Lidar_Angles',[],1);
+    
 end
 % Plot the Lidar Measurements
 if 1
     figure(2)
-    for nScan = 1:50:size(LidarScan,1)
+    for nScan = 1:1:size(LidarScan,1)
         a = LidarAngles;
         z = LidarScan(nScan, :);
         
@@ -147,8 +160,11 @@ if 1
         % Plot
         set(0, 'CurrentFigure', 2);
         clf
-        polar(a, z, '.b')
-        
+        [x, y] = pol2cart(a,z);
+        plot(x,y,'.b')
+        axis equal tight
+        %polar(a, z, '.b')
+        %         hold on
         % Realtime playback
         pause(1/LidarHz);
     end

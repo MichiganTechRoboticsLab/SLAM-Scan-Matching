@@ -1,5 +1,5 @@
 %% MainFunction
-function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths ] = psm( offset, scan, ref, varargin )
+function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths, stoperr ] = psm( offset, scan, ref, varargin )
     %% setupParser
     p = inputParser;
     p.addParameter('PM_STOP_COND', .0004, @(x)isnumeric(x));
@@ -85,13 +85,14 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths ] = psm( 
     fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
     scan(:,2) = scan(:,2) * 100;
     ref(:,2) = ref(:,2) * 100;
-    dxs = [];
-    dys = [];
-    dths = [];
-    axs = [];
-    ays = [];
-    aths = [];
-    errs = [];
+    dxs = zeros(1,PM_MAX_ITER);
+    dys = zeros(1,PM_MAX_ITER);
+    dths = zeros(1,PM_MAX_ITER);
+    axs = zeros(1,PM_MAX_ITER);
+    ays = zeros(1,PM_MAX_ITER);
+    aths = zeros(1,PM_MAX_ITER);
+    errs = zeros(1,PM_MAX_ITER);
+    stoperr = zeros(1,PM_MAX_ITER);
     lsr = struct;
     lsr.rx = 0;
     lsr.ry = 0;
@@ -134,14 +135,15 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths ] = psm( 
     
     while( iter < PM_MAX_ITER && smallCorrErr < 3)
         iter = iter+1;
-        if( (abs(dx*100) + abs(dy*100) + abs(dth)) < PM_STOP_COND)
+        stoperr(iter) = abs(dx) + abs(dy) + abs(dth);
+        if( (abs(dx) + abs(dy) + abs(dth)) < PM_STOP_COND)
             smallCorrErr = smallCorrErr + 1;
         else
             smallCorrErr = 0;
         end
-        axs = [ axs, ax];
-        ays = [ ays, ay];
-        aths = [ aths, ath];
+        axs(iter) = ax;
+        ays(iter) = ay;
+        aths(iter) = ath;
         
         act.rx = ax;
         act.ry = ay;
@@ -152,14 +154,15 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths ] = psm( 
         tmps.data(:,2) = newR;
         tmps.bad = newBad;
         [tmps.x, tmps.y ] = pol2cart(tmps.data(:,1), tmps.data(:,2));
-        plotSegments(tmps);
-        if ( mod(iter, 2) == 0)
+        plotSegments(tmps,refS);
+        if ( mod(iter, 2))
             dth = orientationSearch(refS, newR, newBad);
-            dxs = [dxs, dx];
-            dys = [dys, dy];
-            dths = [dths, dth];
-            errs = [errs, avg_err];
+            dxs(iter) = dx;
+            dys(iter) = dy;
+            dths(iter) = dth;
+            errs(iter) = avg_err;
             ath = ath + dth;
+            
             continue;
         end
         
@@ -169,39 +172,46 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths ] = psm( 
         end
         
         [avg_err, dx, dy] = translationEstimation(refS, newR, newBad, C);
-        errs = [errs, avg_err];
-        dxs = [dxs, dx];
-        dys = [dys, dy];
-        dths = [dths, dth];
+        dxs(iter) = dx;
+        dys(iter) = dy;
+        dths(iter) = dth;
+        errs(iter) = avg_err;
         ax = ax + dx;
         ay = ay + dy;
         
-        change_current_figure(figs(3));
-        cla
+        change_current_figure(3);
+        
         
         
         iters = max(1,iter-ROLL_WINDOW_SIZE):iter;
         
-        subplot(3,1,1);
+        subplot(4,1,1);
         curticks = get(gca, 'XTick');
         set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
         plot(iters, dxs(iters), 'o-');
         title('Evolution of X');
-        axis([iters(1),max(2,iters(end)),-inf,inf])
+        axis([iters(1),max(2,iters(end)),-1.2*max(abs(dxs(iters)))-.1,1.2*max(abs(dxs(iters)))+.1])
         
-        subplot(3,1,2);
+        subplot(4,1,2);
         curticks = get(gca, 'XTick');
         set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
         plot(iters, dys(iters), 's-');
         title('Evolution of Y');
-        axis([iters(1),max(2,iters(end)),-inf,inf])
+        axis([iters(1),max(2,iters(end)),-1.2*max(abs(dys(iters)))-.1,1.2*max(abs(dys(iters)))+.1])
         
-        subplot(3,1,3);
+        subplot(4,1,3);
         curticks = get(gca, 'XTick');
         set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
         plot(iters, rad2deg(dths(iters)),'x-');
         title('Evolution of Ө');
-        axis([iters(1),max(2,iters(end)),-inf,inf])
+        axis([iters(1),max(2,iters(end)),-1.2*max(abs(rad2deg(dths(iters))))-.1,1.2*max(abs(rad2deg(dths(iters))))+.1])
+        
+        subplot(4,1,4);
+        curticks = get(gca, 'XTick');
+        set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+        plot(iters, stoperr(iters),'.-');
+        title('Evolution of Err');
+        axis([iters(1),max(2,iters(end)),-1.2*max(abs(stoperr(iters)))-.1,1.2*max(abs(stoperr(iters)))+.1])
         
         
     end
