@@ -6,7 +6,7 @@ nScanIndex = unique(Lidar_ScanIndex);
 
 numberOfScans = 100000;
 
-start = 180;
+start = 1;
 step = 20; % Scans
 
 stop = start + step * numberOfScans;
@@ -182,13 +182,14 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
             fprintf('PSM: %d iterations with %g error\n', iter, err)
             
-        case 3  % Hill- Climbing
-            searchStep = 0.5;
+
+        case 3  % Hill- Climbing                        
+            searchStep = 0.4;
             [T, ~    ] = hcm(init_guess, scan, map, 'pixelSize', searchStep);
-            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 0.5);
-            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 0.25);
-            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 0.0625);
-            %[T, ogrid] = hcm(T         , scan, map, 'pixelSize', .03);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 1/2);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 1/4);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 1/8);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', 0.01);
             
     end
     fprintf('ScanMatcher: Scan %d matched in %.1f seconds. \n', scanIdx, toc(ScanMatch))

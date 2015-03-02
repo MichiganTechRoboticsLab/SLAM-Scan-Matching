@@ -179,7 +179,8 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
                 dTr(1) = dTr(1) + transformedPointData(2) * funVal;
                 dTr(2) = dTr(2) + transformedPointData(3) * funVal;
     % 
-    %           float rotDeriv = ((-sinRot * currPoint.x() - cosRot * currPoint.y()) * transformedPointData[1] + (cosRot * currPoint.x() - sinRot * currPoint.y()) * transformedPointData[2]);
+    %           float rotDeriv = (-sinRot * currPoint.x() - cosRot * currPoint.y()) * transformedPointData[1] 
+    %                          + ( cosRot * currPoint.x() - sinRot * currPoint.y()) * transformedPointData[2] ;
                 rotDeriv = (-sinRot * currPoint(1) - cosRot * currPoint(2)) * transformedPointData(2) ...
                          + ( cosRot * currPoint(1) - sinRot * currPoint(2)) * transformedPointData(3) ;
                 
@@ -215,7 +216,8 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
 
             dt = H \ dTr;
             
-            dt(3) = dt(3) * 0.2;
+            %dt(3) = dt(3) * 0.3;
+            %dt = dt * 0.2;
         end 
         
         
@@ -232,8 +234,12 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
         end
         
         % Restrict angular search
-        dt(3) = min(dt(3),  0.2);
-        dt(3) = max(dt(3), -0.2);
+%         dt(1) = min(dt(1),  0.1);
+%         dt(1) = max(dt(1), -0.1);
+%         dt(2) = min(dt(2),  0.1);
+%         dt(2) = max(dt(2), -0.1);
+         dt(3) = min(dt(3),  0.1);
+         dt(3) = max(dt(3), -0.1);
 
         % convert to meters
         dt(1) = dt(1) * pixelSize;
