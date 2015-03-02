@@ -50,45 +50,45 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
         % Naive Implemenation (AKA Dereck made it up....)
         if 0
            % dont care about rotation right now.            
-            %dt = sum(dM .* repmat((1-M)', 2, 1), 2);          
+            dt = sum(dM .* repmat((1-M)', 2, 1), 2);          
             %dt = sum(dM, 2) ./ sum((dM ~= 0), 2);          
-            dt = sum(dM, 2); 
-            dt(1) = dt(1) / sum(dM(1,:) ~= 0);
-            dt(2) = dt(2) / sum(dM(2,:) ~= 0);
+            %dt = sum(dM, 2); 
+            dt(1) = dt(1) / sum(dM(1,:) ~= 0) ;
+            dt(2) = dt(2) / sum(dM(2,:) ~= 0) ;
             
             
-            % Find dTheta
-            
-            % Convert scan points to polar
-            [a1, d1]  = cart2pol(S(1,:), S(2,:));
-            
-            % Convert gradients to polar
-            [a2, d2]  = cart2pol(dM(1,:), dM(2,:));
-            
-            % Remove no rotation elements.
-            I = d2 < 0.1;
-            a1(I) = [];
-            d1(I) = [];
-            a2(I) = [];
-            d2(I) = [];
-            
-            % rotate all gradients to one axis.
-            d3 = d2;
-            a3 = a2 - a1;       
-                        
-            % Find Rotation forces
-            %rf = sin(a3) .* d3 ./ d2 * pixelSize;
-            
-            [x, ~] = pol2cart(a3, d3);
-            
-            % Find Mean of rotations
-            mrf = mean(x / d1 * pixelSize);
-            
-            % Set rotation
-            dt(3) = asin(mrf)*0.5;
-            
-            % dTheta code isn't working yet.... 
-            dt(3) = 0;
+            % Find dTheta ( Currently borken )
+            if 0
+                % Convert scan points to polar
+                [a1, d1]  = cart2pol(S(1,:), S(2,:));
+
+                % Convert gradients to polar
+                [a2, d2]  = cart2pol(dM(1,:), dM(2,:));
+
+                % Remove no rotation elements.
+                I = d2 < 0.1;
+                a1(I) = [];
+                d1(I) = [];
+                a2(I) = [];
+                d2(I) = [];
+
+                % rotate all gradients to one axis.
+                d3 = d2;
+                a3 = a2 - a1;       
+
+                % Find Rotation forces
+                %rf = sin(a3) .* d3 ./ d2 * pixelSize;
+
+                [x, ~] = pol2cart(a3, d3);
+
+                % Find Mean of rotations
+                mrf = mean(x / d1 * pixelSize);
+
+                % Set rotation
+                dt(3) = asin(mrf) * -0.25;
+            else
+                dt(3) = 0;
+            end
             
             % Fix div zeros
             dt(isnan(dt)) = 0;
@@ -99,7 +99,7 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
         
         
         % Paper Implementation
-        if 1
+        if 0
             H = zeros(3,3);
             w = T(3);
             for i = 1:N
@@ -142,19 +142,23 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
         
 
 
-        if 0
+        if 1
     %         >> C++ Implementation: http://goo.gl/PLE2Ie
 
     %       Eigen::Affine2f transform(getTransformForState(pose));
     % 
     %       float sinRot = sin(pose[2]);
-            sinRot = sin(e(3));
+            %sinRot = sin(e(3));
+            sinRot = sin(guess(3));
+            
     %       float cosRot = cos(pose[2]);
-            cosRot = cos(e(3));
+            %cosRot = cos(e(3));
+            cosRot = cos(guess(3));
     % 
     %       H = Eigen::Matrix3f::Zero();
             H = zeros(3,3);
     %       dTr = Eigen::Vector3f::Zero();
+    %       (Column vector per: http://eigen.tuxfamily.org/dox/group__TutorialMatrixClass.html)
             dTr = zeros(3,1);
 
     %       for (int i = 0; i < size; ++i) {   
@@ -176,9 +180,9 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
                 dTr(2) = dTr(2) + transformedPointData(3) * funVal;
     % 
     %           float rotDeriv = ((-sinRot * currPoint.x() - cosRot * currPoint.y()) * transformedPointData[1] + (cosRot * currPoint.x() - sinRot * currPoint.y()) * transformedPointData[2]);
-                rotDeriv = (-sinRot * currPoint(1) - cosRot * currPoint(2)) * transformedPointData(2) + (cosRot * currPoint(1) - sinRot * currPoint(2)) * transformedPointData(3);
-                rotDeriv = 500;
-
+                rotDeriv = (-sinRot * currPoint(1) - cosRot * currPoint(2)) * transformedPointData(2) ...
+                         + ( cosRot * currPoint(1) - sinRot * currPoint(2)) * transformedPointData(3) ;
+                
     % 
     %           dTr[2] += rotDeriv * funVal;
                 dTr(3) = dTr(3) + rotDeriv * funVal;
@@ -208,20 +212,11 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
                 H(3, 2) = H(2, 3); 
 
             end
-        
-        
-        % (eq 12) Minimization function
-    %         dt2 = inv(H) * sum(h, 1)' * err(itter);
-    %         
-    %          temp = zeros(1,3);
-    %          for idx = 1:N
-    %              temp = temp + dM(:,idx)' * dS * (1 - M(idx));
-    %          end        
-    %          dt = inv(H) * temp';
 
             dt = H \ dTr;
-
-        end
+            
+            dt(3) = dt(3) * 0.2;
+        end 
         
         
         
@@ -252,9 +247,9 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
         
         % DEBUGGING ONLY %
 
-        fprintf('dt = %.4f %.4f %.4f\n', dt(1), dt(2), rad2deg(dt(3)) )
+        %fprintf('dt = %.4f %.4f %.4f\n', dt(1), dt(2), rad2deg(dt(3)) )
         
-        plotItteration( 4, ogrid, map, scan, T(iter+1,:), err )
+        %plotItteration( 4, ogrid, map, scan, T(iter+1,:), err )
         
         
         % Convergence Criteria
@@ -278,6 +273,7 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
     % Select best transform for solution
     [~,I] = min(err);
     T = T(I,:);
+    
     
  
     %plotItteration( 4, ogrid, map, scan, T, err )

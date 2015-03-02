@@ -1,69 +1,4 @@
-
 clc
-
-if (~exist('init','var') || init == false)
-    if (exist('useSimWorld','var') && useSimWorld == true)
-        Lidar_Ranges = Test_Lidar_Ranges;
-        Lidar_Ranges = Lidar_Ranges + normrnd(0, .001, size(Test_Lidar_Ranges,1),1);
-
-        Lidar_ScanIndex = Test_Lidar_ScanIndex;
-        Lidar_Angles = Test_Lidar_Angles;
-        [Lidar_X, Lidar_Y] = pol2cart(Lidar_Angles, Lidar_Ranges);
-    else
-        useSimWorld = false;
-        % Grab range measurements from Lidar data (First Echo)
-        I = 3:6:6484;
-        Lidar_Ranges = Lidar_Log(:, I);
-
-        % System Timestamp
-        Lidar_Timestamp_System = Lidar_Log(:, 1);
-
-        % Sensor Timestamp
-        Lidar_Timestamp_Sensor = Lidar_Log(:, 2) / 1000;
-
-        % Combined Timestamp
-        Lidar_Timestamp = Lidar_Timestamp_System(1) - Lidar_Timestamp_Sensor(1) + Lidar_Timestamp_Sensor;
-
-        % Scan Index
-        Lidar_ScanIndex = (1:Lidar_ScanCount)';
-
-        % Angles for each measurement
-        % Rotated the lidar data to face the Y-Axis
-        da = (Lidar_AngleEnd - Lidar_AngleStart) / (Lidar_nPoints - 1);
-        Lidar_Angles = (Lidar_AngleStart:da:Lidar_AngleEnd)' + pi/2;
-
-
-        % Copy each col vector across for each measurement
-        Lidar_Timestamp = repmat(Lidar_Timestamp, 1, Lidar_nPoints);
-        Lidar_ScanIndex = repmat(Lidar_ScanIndex, 1, Lidar_nPoints);
-        Lidar_Angles    = repmat(Lidar_Angles', Lidar_ScanCount, 1);
-
-        % Reformat the data so there is one measurement per row
-        Lidar_Ranges = reshape(Lidar_Ranges', [], 1);
-        Lidar_Timestamp = reshape(Lidar_Timestamp', [], 1);
-        Lidar_ScanIndex = reshape(Lidar_ScanIndex', [], 1);
-        Lidar_Angles = reshape(Lidar_Angles', [], 1);
-
-
-        % Convert from mm to meters
-        Lidar_Ranges = Lidar_Ranges / 1000;
-        switch algo
-            case 2
-                fprintf('ScanMatcher: Data is ready for PSM\n')
-            otherwise
-                % Remove invalid range data (Too close or too far)
-                I = Lidar_Ranges < 0.75 | Lidar_Ranges > 30;
-                Lidar_ScanIndex(I) = [];
-                Lidar_Timestamp(I) = [];
-                Lidar_Angles(I) = [];
-                Lidar_Ranges(I) = [];
-        end
-        % Convert to Cartisian Coordinates
-        % (Rotated data so that the Lidar faces the y-Axis)
-        [Lidar_X, Lidar_Y] = pol2cart(Lidar_Angles, Lidar_Ranges);
-    end
-    init = true;
-end
 
 % Scan Settings
 nScanIndex = unique(Lidar_ScanIndex);
@@ -82,7 +17,7 @@ path = [0 0 0];
 world = [];
 T = [0 0 0];
 init_guess = [0 0 0];
-usePrevOffsetAsGuess = false;
+usePrevOffsetAsGuess = true;
 useScan2World = false;
 connectTheDots = true;
 
@@ -256,14 +191,14 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         pose = T;
     else
         % Rotate translation into map frame
-        theta = -pose(3);
+        theta = pose(3);
         Trans = [ cos(theta) -sin(theta), 0;
-            sin(theta)  cos(theta), 0;
-            0           0           1];
-        mapT  = T * Trans;
+                  sin(theta)  cos(theta), 0;
+                  0           0           1];
+        mapT  = Trans * T';
 
         % Add previous scan to pose
-        pose = pose + [mapT(1:2), -T(3)];
+        pose = pose + [mapT(1:2)', T(3)];
     end
     fprintf('ScanMatcher: Scan %d pose is ', scanIdx);
     tmp = pose;
@@ -302,7 +237,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     % Current Scan Transformation
     dx = T(1);
     dy = T(2);
-    theta = -T(3);
+    theta = T(3);
     LTrans = [ cos(theta) -sin(theta) dx;
         sin(theta)  cos(theta) dy;
         0           0  1];
@@ -399,14 +334,14 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             title('Evolution of Ө');
             axis tight
 
-        case 3  % Hill Climbing
-
-            % Occupancy Grid
-            change_current_figure(3);
-            cla
-            imagesc(imrotate(ogrid.grid,90))
-            axis equal
-            colormap([1 1 1; 0.5 0.5 0.5; 0 0 0]);
+%         case 3  % Hill Climbing
+% 
+%             % Occupancy Grid
+%             change_current_figure(3);
+%             cla
+%             imagesc(imrotate(ogrid.grid,90))
+%             axis equal
+%             colormap([1 1 1; 0.5 0.5 0.5; 0 0 0]);
     end
 
 

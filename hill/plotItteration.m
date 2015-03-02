@@ -35,7 +35,7 @@ function plotItteration( fig, ogrid, map, scan, T, err)
     plot(map_y, map_x, '.r');
     plot(scan_y, scan_x, '.b');
     plot(S_y, S_x, '.g');    
-    legend('Reference', 'Current Scan', 'Registered Scan', 'location', 'bestoutside')
+    legend('Reference', 'Current Scan', 'Registered Scan', 'location', 'best')
 
     
     
