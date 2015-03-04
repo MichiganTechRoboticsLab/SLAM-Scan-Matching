@@ -2,7 +2,7 @@ function dth = orientationSearch(ref, newR, newBad)
     %% constants
     global PM_SEARCH_WINDOW
     global PM_MAX_ERR
-
+    
     global PM_DFI
     %%
     LARGE_NUMBER = 10000;
@@ -18,10 +18,10 @@ function dth = orientationSearch(ref, newR, newBad)
         e = 0;
         minI = 0; maxI=0;
         if di <= 0
-            minI = -di + 1;
+            minI = -di+1;
             maxI = min(size(ref.data,1),size(newR,1));
         else
-            minI = 0 + 1;
+            minI = 1;
             maxI = min(size(ref.data,1),size(newR,1)) - di;
         end
         
@@ -36,26 +36,44 @@ function dth = orientationSearch(ref, newR, newBad)
         end
         k = k + 1;
     end
-
+    
     [~, imin] = min(err);
     global figs
-    change_current_figure(figs(6));
+    change_current_figure(6);
     cla
-    plot(beta(imin-50:imin+50),err(imin-50:imin+50))
-    dth = beta(imin)*PM_DFI;
-        m = 0;
-        if(imin >= 2 && imin < (k))
-            m = (err(imin+1) - err(imin - 1))/(2*(2 * err(imin) - err(imin-1) - err(imin + 1)));
+    hold on
+    plot(-3:3,err(imin-3:imin+3),'.r-')
+    dth = (beta(imin))*PM_DFI;
+    xs = [-1;0;1];
+    C = polyfit(xs, err(xs+imin),2);
+    newxs = min(xs):.1:max(xs);
+    newerr = polyval(C,newxs);
+    plot(newxs,newerr,'g-');
+    
+    m = 0;
+    if(imin >= 2 && imin < (k))
+        xs = [-1;0;1];
+        C = polyfit(xs, err(xs+imin),2);
+        m = roots(polyder(C));
+        newxs = min(xs):.1:max(xs);
+        newerr = polyval(C,newxs);
+        plot(newxs,newerr,'g-');
+        plot(m,polyval(C,m),'g.');
+        m = roots(polyder(C));
+        if( polyval(C,m) > err(imin))
+            m = 0;
         end
-        dth = dth+m*PM_DFI;
-%     if(imin >= 2 && imin < (k))
-%         D = err(imin -1) + err(imin+1) -2 * err(imin);
-%         d = LARGE_NUMBER;
-%         if (abs(D) > .01 && err(imin-1) > err(imin) && err(imin+1) > err(imin))
-%             d = (err(imin-1) - err(imin+1)) / D / 2;
-%         end
-%         if abs(d) < 1
-%             dth = dth + d*PM_DFI;
-%         end
-%     end
+    end
+    hold off
+    dth = dth+m*PM_DFI;
+    %     if(imin >= 2 && imin < (k))
+    %         D = err(imin -1) + err(imin+1) -2 * err(imin);
+    %         d = LARGE_NUMBER;
+    %         if (abs(D) > .01 && err(imin-1) > err(imin) && err(imin+1) > err(imin))
+    %             d = (err(imin-1) - err(imin+1)) / D / 2;
+    %         end
+    %         if abs(d) < 1
+    %             dth = dth + d*PM_DFI;
+    %         end
+    %     end
 end
