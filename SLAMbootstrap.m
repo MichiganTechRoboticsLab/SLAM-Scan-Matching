@@ -176,12 +176,14 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             fprintf('PSM: %d iterations with %g error\n', iter, err)
             
         case 3  % Hill- Climbing                        
-            searchStep = 0.4;
-            [T, ~    ] = hcm(init_guess, scan, map, 'pixelSize', searchStep);
-            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 1/2);
-            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 1/4);
-            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 1/8);
-            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', 0.01);
+            searchStep = 0.5;
+            maxIterations = 30;
+            
+            [T, ~    ] = hcm(init_guess, scan, map, 'pixelSize', searchStep      , 'maxIterations', maxIterations);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 1/2, 'maxIterations', maxIterations);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 1/4, 'maxIterations', maxIterations);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 1/8, 'maxIterations', maxIterations);
+            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', 0.03            , 'maxIterations', maxIterations);
             
     end
     fprintf('ScanMatcher: Scan %d matched in %.1f seconds. \n', scanIdx, toc(ScanMatch))
