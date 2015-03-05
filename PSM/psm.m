@@ -9,11 +9,12 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths, stoperr 
     p.addParameter('PM_LASER_Y', 0, @(x)isnumeric(x));
     p.addParameter('PM_FOV', 270, @(x)isnumeric(x));
     p.addParameter('PM_L_POINTS', 1081, @(x)isnumeric(x));
-    p.addParameter('PM_WEIGHTING_FACTOR', 30*30, @(x)isnumeric(x));
+    p.addParameter('PM_WEIGHTING_FACTOR', 70*70, @(x)isnumeric(x));
     p.addParameter('PM_SEG_MAX_DIST', .2, @(x)isnumeric(x));
     p.addParameter('PM_CHANGE_WEIGHT_ITER', 10, @(x)isnumeric(x));
     p.addParameter('PM_MAX_ERR', .3, @(x)isnumeric(x));
     p.addParameter('PM_SEARCH_WINDOW', 200, @(x)isnumeric(x));
+    p.addParameter('PM_MEDIAN_WINDOW', 5, @(x)isnumeric(x));
     
     p.parse(varargin{:})
     
@@ -30,6 +31,7 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths, stoperr 
     global PM_CHANGE_WEIGHT_ITER
     global PM_MAX_ERR
     global PM_SEARCH_WINDOW
+    global PM_MEDIAN_WINDOW
     
     global PM_RANGE
     global PM_MOVING
@@ -45,10 +47,11 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths, stoperr 
     global PM_SI
     global PM_CO
     
+    
     global figs
     
     %% SETUP CONSTANTS
-    ROLL_WINDOW_SIZE         = 20;
+    ROLL_WINDOW_SIZE         = 5;
     PM_STOP_COND             = p.Results.PM_STOP_COND;
     PM_MAX_ITER              = p.Results.PM_MAX_ITER;
     PM_MAX_RANGE             = p.Results.PM_MAX_RANGE;
@@ -61,6 +64,7 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths, stoperr 
     PM_CHANGE_WEIGHT_ITER    = p.Results.PM_CHANGE_WEIGHT_ITER;
     PM_MAX_ERR               = p.Results.PM_MAX_ERR;
     PM_SEARCH_WINDOW         = p.Results.PM_SEARCH_WINDOW;
+    PM_MEDIAN_WINDOW         = p.Results.PM_MEDIAN_WINDOW;
     
     PM_RANGE                 = 1;
     PM_MOVING                = 2;
@@ -84,8 +88,8 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths, stoperr 
     tmp = offset;
     tmp(3) = rad2deg(tmp(3));
     fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
-    scan(:,2) = scan(:,2) * 100;
-    ref(:,2) = ref(:,2) * 100;
+    scan(:,2) = scan(:,2);
+    ref(:,2) = ref(:,2);
     dxs = zeros(1,PM_MAX_ITER);
     dys = zeros(1,PM_MAX_ITER);
     dths = zeros(1,PM_MAX_ITER);
@@ -136,8 +140,8 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths, stoperr 
     
     while( iter < PM_MAX_ITER && smallCorrErr < 3)
         iter = iter+1;
-        stoperr(iter) = abs(dx) + abs(dy) + abs(dth);
-        if( (abs(dx) + abs(dy) + abs(dth)) < PM_STOP_COND)
+        stoperr(iter) = abs(dx)*100 + abs(dy)*100 + abs(deg2rad(dth));
+        if( (abs(dx)*100 + abs(dy)*100 + abs(deg2rad(dth))) < PM_STOP_COND)
             smallCorrErr = smallCorrErr + 1;
         else
             smallCorrErr = 0;
@@ -145,7 +149,7 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths, stoperr 
         axs(iter) = ax;
         ays(iter) = ay;
         aths(iter) = ath;
-        fprintf('%d %f %f %f\n',iter, ax/100, ay/100, rad2deg(ath));
+        fprintf('%d %f %f %f\n',iter, ax, ay, rad2deg(ath));
         act.rx = ax;
         act.ry = ay;
         act.th = ath;
@@ -155,22 +159,22 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths, stoperr 
         tmps.data(:,2) = newR;
         tmps.bad = newBad;
         [tmps.x, tmps.y ] = pol2cart(tmps.data(:,1), tmps.data(:,2));
-%         plotSegments(tmps,refS);
-%         if ( mod(iter, 2))
-%             dth = orientationSearch(refS, newR, newBad);
-%             dxs(iter) = dx;
-%             dys(iter) = dy;
-%             dths(iter) = dth;
-%             errs(iter) = avg_err;
-%             ath = ath + dth;
-%             
-%             continue;
-%         end
+        plotSegments(tmps,refS);
+        if ( mod(iter, 2))
+            dth = orientationSearch(refS, newR, newBad);
+            dxs(iter) = dx;
+            dys(iter) = dy;
+            dths(iter) = dth;
+            errs(iter) = avg_err;
+            ath = ath + dth;
+            
+            continue;
+        end
         
         
         if (iter == PM_CHANGE_WEIGHT_ITER)
             %if(mod(iter,PM_CHANGE_WEIGHT_ITER) == 0)
-            C = C/50;
+            C = C/70;
         end
         
         [avg_err, dx, dy] = translationEstimation(refS, newR, newBad, C);
@@ -218,7 +222,7 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths, stoperr 
         drawnow
     end
     
-    offset = [ax / 100, ay / 100, ath];
+    offset = [ax, ay, ath];
     %% cleanup
     clearvars -global PM*
 end

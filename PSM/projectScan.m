@@ -7,12 +7,14 @@ function [scan, newR, newBad] = projectScan(scan)
     global PM_OCCLUDED
     global PM_EMPTY
 
+    global PM_MAX_RANGE;
     global PM_FI_MIN
     global PM_DFI
     global PM_FI
     %%
     newR = zeros(size(scan.data,1),1);
-    newR(:) = 10000;
+    LARGE_NUMBER = PM_MAX_RANGE + 10;
+    newR(:) = LARGE_NUMBER;
     newBad = zeros(size(scan.data,1),1);
     newBad = bitset(newBad, PM_EMPTY);
 
@@ -28,8 +30,8 @@ function [scan, newR, newBad] = projectScan(scan)
         if(scan.seg(i) ~= 0 && scan.seg(i) == scan.seg(i-1) && scan.bad(i) == 0 && scan.bad(i-1) == 0 ) % && fi(i)>PM_FI_MIN && fi(i-1) > PM_FI_MIN
             occluded = false;
             j0 = 0; j1 = 0; r0 = 0; r1 = 0; a0 = 0; a1 = 0;
-            if(fi(i) - fi(i-1) >= pi)
-%                 continue;
+            if(abs(fi(i) - fi(i-1)) >= pi)
+                 continue;
             end
             if( fi(i) > fi(i-1) )
                 occluded = false;
@@ -55,8 +57,8 @@ function [scan, newR, newBad] = projectScan(scan)
                     newR(j0) = ri;
                     newBad(j0) = bitset(newBad(j0),PM_EMPTY,0 );
                     newBad(j0) = bitset(newBad(j0),PM_OCCLUDED, occluded );
-                    newBad(j0) = bitor(newBad(j0), scan.bad(i));
-                    newBad(j0) = bitor(newBad(j0), scan.bad(i-1));
+%                     newBad(j0) = bitor(newBad(j0), scan.bad(i));
+%                     newBad(j0) = bitor(newBad(j0), scan.bad(i-1));
                 end
                 j0 = j0 + 1;
             end
