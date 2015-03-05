@@ -5,18 +5,19 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
 
     % Read optional parameters
     p = inputParser;
-    p.addParameter('pixelSize', 1, @(x)isnumeric(x));
+    p.addParameter('pixelSize'    ,  1, @(x)isnumeric(x));
+    p.addParameter('maxIterations', 20, @(x)isnumeric(x));
     p.parse(varargin{:})
 
-    pixelSize = p.Results.pixelSize;
-
+    pixelSize     = p.Results.pixelSize;
+    maxIterations = p.Results.maxIterations;
     
     % Initial values
     T(1,:) = guess;
     
     ogrid = oGrid(map, [], pixelSize);
     
-    maxIterations = 20;
+   
     for iter = 1:maxIterations
         % Gauss-Newton gradient Decent
 
