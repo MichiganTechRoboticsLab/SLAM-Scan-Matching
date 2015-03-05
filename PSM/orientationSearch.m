@@ -2,6 +2,7 @@ function dth = orientationSearch(ref, newR, newBad)
     %% constants
     global PM_SEARCH_WINDOW
     global PM_MAX_ERR
+    global PM_L_POINTS
     
     global PM_DFI
     %%
@@ -14,18 +15,15 @@ function dth = orientationSearch(ref, newR, newBad)
     err = zeros(size(beta,2),1);
     err(:) = LARGE_NUMBER;
     for di = beta
-        n = 0;
-        e = 0;
-        minI = 0; maxI=0;
         if di <= 0
             minI = -di+1;
-            maxI = min(size(ref.data,1),size(newR,1));
+            maxI = PM_L_POINTS;
         else
             minI = 1;
-            maxI = min(size(ref.data,1),size(newR,1)) - di;
+            maxI = PM_L_POINTS - di+1;
         end
         
-        nI = minI:maxI;
+        nI = minI:(maxI-1);
         rI = nI + di;
         delta = abs(newR(nI) - ref.data(rI,2));
         delta(~(newBad(nI) == 0 & ref.bad(rI) == 0 )) = [];
@@ -38,12 +36,13 @@ function dth = orientationSearch(ref, newR, newBad)
     end
     
     [~, imin] = min(err);
+    %imin = imin -1;
     global figs
     change_current_figure(6);
     cla
     hold on
     plot(-3:3,err(imin-3:imin+3),'.r-')
-    dth = (beta(imin))*PM_DFI;
+    dth = ((beta(imin)))*PM_DFI;
     xs = [-1;0;1];
     C = polyfit(xs, err(xs+imin),2);
     newxs = min(xs):.1:max(xs);
@@ -64,7 +63,7 @@ function dth = orientationSearch(ref, newR, newBad)
             m = 0;
         end
     end
-    hold off
+%     hold off
     dth = dth+m*PM_DFI;
     %     if(imin >= 2 && imin < (k))
     %         D = err(imin -1) + err(imin+1) -2 * err(imin);

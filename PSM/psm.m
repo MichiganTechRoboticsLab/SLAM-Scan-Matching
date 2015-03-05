@@ -46,6 +46,7 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths, stoperr 
     global PM_CO
     
     global figs
+    
     %% SETUP CONSTANTS
     ROLL_WINDOW_SIZE         = 20;
     PM_STOP_COND             = p.Results.PM_STOP_COND;
@@ -144,7 +145,7 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths, stoperr 
         axs(iter) = ax;
         ays(iter) = ay;
         aths(iter) = ath;
-        
+        fprintf('%d %f %f %f\n',iter, ax/100, ay/100, rad2deg(ath));
         act.rx = ax;
         act.ry = ay;
         act.th = ath;
@@ -154,20 +155,21 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths, stoperr 
         tmps.data(:,2) = newR;
         tmps.bad = newBad;
         [tmps.x, tmps.y ] = pol2cart(tmps.data(:,1), tmps.data(:,2));
-        plotSegments(tmps,refS);
-        if ( mod(iter, 2))
-            dth = orientationSearch(refS, newR, newBad);
-            dxs(iter) = dx;
-            dys(iter) = dy;
-            dths(iter) = dth;
-            errs(iter) = avg_err;
-            ath = ath + dth;
-            
-            continue;
-        end
+%         plotSegments(tmps,refS);
+%         if ( mod(iter, 2))
+%             dth = orientationSearch(refS, newR, newBad);
+%             dxs(iter) = dx;
+%             dys(iter) = dy;
+%             dths(iter) = dth;
+%             errs(iter) = avg_err;
+%             ath = ath + dth;
+%             
+%             continue;
+%         end
         
         
-        if (mod(iter,PM_CHANGE_WEIGHT_ITER) == 0)
+        if (iter == PM_CHANGE_WEIGHT_ITER)
+            %if(mod(iter,PM_CHANGE_WEIGHT_ITER) == 0)
             C = C/50;
         end
         
@@ -213,7 +215,7 @@ function [ offset, iter, avg_err, axs, ays, aths, errs, dxs, dys, dths, stoperr 
         title('Evolution of Err');
         axis([iters(1),max(2,iters(end)),-1.2*max(abs(stoperr(iters)))-.1,1.2*max(abs(stoperr(iters)))+.1])
         
-        
+        drawnow
     end
     
     offset = [ax / 100, ay / 100, ath];

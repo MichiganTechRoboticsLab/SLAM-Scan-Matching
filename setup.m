@@ -1,5 +1,5 @@
-clear
-close all
+ clear
+% close all
 
 % Load sensor dataset
 load('../data/hallroomvn.mat')
@@ -15,16 +15,16 @@ addpath( wd, [wd '/GICP'], [wd '/Olson'], [wd '/PSM'], [wd '/hill'], [wd '/util'
 % 2: PSM 
 % 3: Hill-Climbing
 
-algo = 3;
+algo = 2;
 
 
 
-useSimWorld = false;
+useSimWorld = true;
 
 if (~exist('init','var') || init == false)
     if (exist('useSimWorld','var') && useSimWorld == true)
         Lidar_Ranges = Test_Lidar_Ranges;
-        Lidar_Ranges = Lidar_Ranges + normrnd(0, .001, size(Test_Lidar_Ranges,1),1);
+        Lidar_Ranges = Lidar_Ranges;% + normrnd(0, .001, size(Test_Lidar_Ranges,1),1);
 
         Lidar_ScanIndex = Test_Lidar_ScanIndex;
         Lidar_Angles = Test_Lidar_Angles;

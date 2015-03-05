@@ -7,7 +7,7 @@ nScanIndex = unique(Lidar_ScanIndex);
 numberOfScans = 100000;
 
 start = 1;
-step = 20; % Scans
+step = 1; % Scans
 
 stop = start + step * numberOfScans;
 
@@ -19,7 +19,7 @@ path = [0 0 0];
 world = [];
 T = [0 0 0];
 init_guess = [0 0 0];
-usePrevOffsetAsGuess = true;
+usePrevOffsetAsGuess = false;
 useScan2World = false;
 switch algo
     case 2
@@ -170,15 +170,14 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
                 'PM_MAX_ITER', 30,                                                   ...
                 'PM_MAX_RANGE', 3000,                                                  ...
                 'PM_MIN_RANGE', 10,                                                  ...
-                'PM_WEIGHTING_FACTOR', 20*20,                                        ...
-                'PM_SEG_MAX_DIST', 20,                                               ...
+                'PM_WEIGHTING_FACTOR', 30*30,                                        ...
+                'PM_SEG_MAX_DIST', 10,                                               ...
                 'PM_CHANGE_WEIGHT_ITER', 10,                                         ...
-                'PM_MAX_ERR', 20,                                                    ...
+                'PM_MAX_ERR', 10,                                                    ...
                 'PM_SEARCH_WINDOW', 200);
             fprintf('PSM: Final Guess: ')
             tmp = T;
             tmp(3) = rad2deg(tmp(3));
-            T(3) = -T(3);
             fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
             fprintf('PSM: %d iterations with %g error\n', iter, err)
             
