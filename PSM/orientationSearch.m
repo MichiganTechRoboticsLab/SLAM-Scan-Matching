@@ -1,4 +1,4 @@
-function dth = orientationSearch(ref, newR, newBad)
+function dth = orientationSearch(ref, newR, newBad, C)
     %% constants
     global PM_SEARCH_WINDOW
     global PM_MAX_ERR
@@ -30,7 +30,8 @@ function dth = orientationSearch(ref, newR, newBad)
         I = ~(newBad(nI) == 0 & ref.bad(rI) == 0 & delta < PM_MAX_ERR );
         delta(I) = [];
         if(~isempty(delta))
-            err(k) = mean(delta);
+            w = 1./(C ./ ((delta .^ 2) + C));
+            err(k) = mean(w.*delta);
         else
             err(k) = LARGE_NUMBER;
         end
@@ -51,13 +52,13 @@ function dth = orientationSearch(ref, newR, newBad)
     end
     
     [~, imin] = min(err);
-    %imin = imin -1;
+    imin = imin;
     global figs
     change_current_figure(6);
     cla
     hold on
     plot(rad2deg(beta*PM_DFI),err,'.r-')
-    dth = ((beta(imin)))*PM_DFI;
+    dth = ((beta(imin-1)))*PM_DFI;
     
     
     m = 0;
