@@ -2,7 +2,7 @@ clc
 
 % Scan ROI Settings
 start         = 150;
-step          = 5; % Scans
+step          = 10; % Scans
 numberOfScans = 100000;
 skip          = 1; % Points
 

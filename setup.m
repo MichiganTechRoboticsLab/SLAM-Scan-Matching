@@ -3,8 +3,7 @@
 
 % Load sensor dataset
 load('../datasets/hallroomvn.mat')
-load('testData/testworld.mat')
-load('testData/testWorldPSM.mat')
+%load('testData/testWorldPSM.mat')
 %load('testData/testworld.mat')
 
 
@@ -18,11 +17,11 @@ addpath( wd, [wd '/GICP'], [wd '/Olson'], [wd '/PSM'], [wd '/hill'], [wd '/util'
 % 2: PSM 
 % 3: Hill-Climbing
 
-algo = 2;
+algo = 3;
 
 
 
-useSimWorld = true;
+useSimWorld = false;
 
 if (~exist('init','var') || init == false)
     if (exist('useSimWorld','var') && useSimWorld == true)
