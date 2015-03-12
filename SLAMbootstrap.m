@@ -1,17 +1,29 @@
 clc
 
-
-% Scan Settings
-nScanIndex = unique(Lidar_ScanIndex);
-
+% Scan ROI Settings
+start         = 150;
+step          = 5; % Scans
 numberOfScans = 100000;
+skip          = 1; % Points
 
-start = 1;
-step = 20; % Scans
 
+% Framework Options
+usePrevOffsetAsGuess = true;
+useScan2World = true;
+connectTheDots = true;
+ConnectDist = 0.01;
+
+
+% Algorithm Specific Overrides
+switch algo
+    case 2
+        connectTheDots = false; % doesn't work with algo 2
+end
+
+
+% Initialize State Variables
+nScanIndex = unique(Lidar_ScanIndex);
 stop = start + step * numberOfScans;
-
-skip = 1; % Points
 
 map = [];
 pose = [0 0 0];
@@ -19,14 +31,6 @@ path = [0 0 0];
 world = [];
 T = [0 0 0];
 init_guess = [0 0 0];
-usePrevOffsetAsGuess = true;
-useScan2World = false;
-switch algo
-    case 2
-        connectTheDots = false;
-    otherwise
-        connectTheDots = false;
-end
 
 
 % Clear all figures before running
@@ -38,7 +42,7 @@ for i = 1:8
     change_current_figure(i);
     clf;
 end
-% drawnow;
+drawnow;
 pause(0.1);
 
 
@@ -61,6 +65,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     if isempty(map)
         % Init map and world
         map = scan;
+        
         tempMap = [];
         switch algo
             case 2
@@ -75,12 +80,12 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         
         if connectTheDots
             % Linear interpolation of 'connected' map points
-            m = min(sqrt(map(:,1).^2 + map(:,2).^2));
-            d = m * sin(deg2rad(270/1081));
-            map = fillLidarData(map(1:skip:end,:), 270, d);
+            %m = min(sqrt(map(:,1).^2 + map(:,2).^2));
+            %d = m * sin(deg2rad(270/1081));
+            map = fillLidarData(map(1:skip:end,:), 270, ConnectDist);
             
             % Limit number of points in the map
-            I = randsample(size(map,1), min(size(map,1), 300));
+            %I = randsample(size(map,1), min(size(map,1), 300));
             %map = map(I,:);
         end
         
@@ -93,11 +98,11 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         % Translate current scan to map coordinates
         dx    = pose(1);
         dy    = pose(2);
-        theta = -pose(3);
+        theta = pose(3);
         
-        M = [ cos(theta) -sin(theta) dx;
-            sin(theta)  cos(theta) dy;
-            0           0  1];
+        M = [ cos(theta) -sin(theta) dx ;
+              sin(theta)  cos(theta) dy ;
+              0           0          1  ];
         
         scanWorldFrame = [scan(1:skip:end,:) ones(size(scan,1), 1)];
         scanWorldFrame = scanWorldFrame(1:skip:end,:) * M';
@@ -112,17 +117,17 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         
         % Limit number of points in the map
         I = randsample(size(map,1), min(size(map,1), 2000));
-        map = map(I,:);
+        %map = map(I,:);
     end
     
     if connectTheDots
         % Linear interpolation of 'connected' scan points
-        m = min(sqrt(scan(:,1).^2 + scan(:,2).^2));
-        d = m * sin(deg2rad(270/1081));
-        scan = fillLidarData(scan(1:skip:end,:), 270, d);
+        %m = min(sqrt(scan(:,1).^2 + scan(:,2).^2));
+        %d = m * sin(deg2rad(270/1081));
+        scan = fillLidarData(scan(1:skip:end,:), 270, ConnectDist);
         
         % Limit number of points in the map
-        I = randsample(size(scan,1), min(size(scan,1), 300));
+        %I = randsample(size(scan,1), min(size(scan,1), 300));
         %scan = scan(I,:);
     end
     
@@ -184,17 +189,20 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             
 
         case 3  % Hill- Climbing                        
-            searchStep = 0.5;
+            searchStep = 0.1;
             maxIterations = 30;
             
-            [T, ~    ] = hcm(init_guess, scan, map, 'pixelSize', searchStep      , 'maxIterations', maxIterations);
-            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 1/2, 'maxIterations', maxIterations);
-            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 1/4, 'maxIterations', maxIterations);
-            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', searchStep * 1/8, 'maxIterations', maxIterations);
-            [T, ~    ] = hcm(T         , scan, map, 'pixelSize', 0.03            , 'maxIterations', maxIterations);
+            while searchStep > 0.03
+                T = init_guess;            
+                [T, ~    ] = hcm(T, scan, map, 'pixelSize', searchStep      , 'maxIterations', maxIterations);
+                searchStep = searchStep * .5;
+            end
             
     end
     fprintf('ScanMatcher: Scan %d matched in %.1f seconds. \n', scanIdx, toc(ScanMatch))
+    
+    
+    
     
     % Update current pose
     if useScan2World
@@ -202,10 +210,10 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     else
         % Rotate translation into map frame
         theta = pose(3);
-        Trans = [ cos(theta) -sin(theta), 0;
+        Trans = [ cos(theta) -sin(theta) 0 ;
 
-                  sin(theta)  cos(theta), 0;
-                  0           0           1];
+                  sin(theta)  cos(theta) 0 ;
+                  0           0          1 ];
         mapT  = Trans * T';
 
 
@@ -236,23 +244,24 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     end
     
     % Current World Pose Transform
-    dx = pose(1);
-    dy = pose(2);
+    dx    = pose(1);
+    dy    = pose(2);
     theta = pose(3);
     
-    Trans = [ cos(theta) -sin(theta) dx;
-        sin(theta)  cos(theta) dy;
-        0           0  1];
-    temp = [tempScan ones(size(tempScan,1),1)] * Trans';
+    Trans = [ cos(theta) -sin(theta) dx ;
+              sin(theta)  cos(theta) dy ;
+              0           0          1  ];
+    temp =  [tempScan ones(size(tempScan,1),1)] * Trans';
     
     
     % Current Scan Transformation
-    dx = T(1);
-    dy = T(2);
+    dx    = T(1);
+    dy    = T(2);
     theta = T(3);
-    LTrans = [ cos(theta) -sin(theta) dx;
-        sin(theta)  cos(theta) dy;
-        0           0  1];
+    
+    LTrans = [ cos(theta) -sin(theta) dx ;
+               sin(theta)  cos(theta) dy ;
+               0           0          1  ];
     tempL = [tempScan ones(size(tempScan,1),1)] * LTrans';
     
     
@@ -289,13 +298,13 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             tempMap = map;
     end
     
-    plot(tempMap(:,1),tempMap(:,2),'r.')
+    plot(tempMap(:,1),tempMap(:,2),'r.', 'MarkerSize', 1)
     if useScan2World
-        plot(scanWorldFrame(:,1),scanWorldFrame(:,2),'b.')
+        plot(scanWorldFrame(:,1),scanWorldFrame(:,2),'b.', 'MarkerSize', 1)
     else
-        plot(tempScan(:,1),tempScan(:,2),'b.')
+        plot(tempScan(:,1),tempScan(:,2),'b.', 'MarkerSize', 1)
     end
-    plot(tempL(:,1),tempL(:,2),'g.')
+    plot(tempL(:,1),tempL(:,2),'g.', 'MarkerSize', 1)
     hold off
     axis equal
     title(['Scan: ' num2str(scanIdx)]);

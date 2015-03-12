@@ -2,7 +2,7 @@ clear
 close all
 
 % Load sensor dataset
-load('../data/hallroomvn.mat')
+load('../datasets/hallroomvn.mat')
 load('testData/testworld.mat')
 
 % Set up paths
