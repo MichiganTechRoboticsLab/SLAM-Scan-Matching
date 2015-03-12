@@ -17,8 +17,9 @@ Lidar_nPoints = 1081;
 % Where n is the number of line endpoints
 % the first row is the x coordinates
 % the second row is the y coordinates.
+World = [];
 World{1} = [-3 -3 3 3;
-    0  5 5 0];
+    0 5 5 0];
 
 
 % Plot the world
@@ -97,7 +98,7 @@ end
 
 if 1
     % Generate Lidar Sensor measurements
-    LidarRange = 60.0;
+    LidarRange = 30.0;
     da = (Lidar_AngleEnd - Lidar_AngleStart) / (Lidar_nPoints - 1);
     LidarAngles = (Lidar_AngleStart:da:Lidar_AngleEnd) + pi/2;
     LidarScan = zeros(size(LidarPose,1), size(LidarAngles,2));
@@ -153,9 +154,9 @@ if 1
         z = LidarScan(nScan, :);
         
         %  Remove out of range measurements
-        I = (z >= LidarRange);
-        a(I) = [];
-        z(I) = [];
+%         I = (z >= LidarRange);
+%         a(I) = [];
+%         z(I) = [];
         
         % Plot
         set(0, 'CurrentFigure', 2);

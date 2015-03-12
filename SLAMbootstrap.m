@@ -13,7 +13,6 @@ useScan2World = true;
 connectTheDots = true;
 ConnectDist = 0.01;
 
-
 % Algorithm Specific Overrides
 switch algo
     case 2
@@ -171,19 +170,18 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             
         case 2
             [ T, iter, err, axs, ays, aths, errs, dxs, dys, dths, stoperr ] = psm(init_guess, scan(1:skip:end,:), map(1:skip:end,:), ...
-                'PM_STOP_COND', .04,                                               ...
+                'PM_STOP_COND', .4,                                               ...
                 'PM_MAX_ITER', 30,                                                   ...
-                'PM_MAX_RANGE', 3000,                                                  ...
-                'PM_MIN_RANGE', 10,                                                  ...
-                'PM_WEIGHTING_FACTOR', 20*20,                                        ...
-                'PM_SEG_MAX_DIST', 20,                                               ...
+                'PM_MAX_RANGE', 10,                                                  ...
+                'PM_MIN_RANGE', .1,                                                  ...
+                'PM_WEIGHTING_FACTOR', .70*.70,                                        ...
+                'PM_SEG_MAX_DIST', .20,                                               ...
                 'PM_CHANGE_WEIGHT_ITER', 10,                                         ...
-                'PM_MAX_ERR', 20,                                                    ...
-                'PM_SEARCH_WINDOW', 200);
+                'PM_MAX_ERR', 1.00,                                                    ...
+                'PM_SEARCH_WINDOW', 80);
             fprintf('PSM: Final Guess: ')
             tmp = T;
             tmp(3) = rad2deg(tmp(3));
-            T(3) = -T(3);
             fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
             fprintf('PSM: %d iterations with %g error\n', iter, err)
             
@@ -229,7 +227,13 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         tmp = goodPose;
         tmp(3) = rad2deg(tmp(3));
         fprintf('ScanMatcher: Scan %d pose should be ', scanIdx);
-        fprintf(['[ ' repmat('%g ', 1, size(goodPose, 2)-1) '%g ]\n'], goodPose')
+        fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
+        poseErr = goodPose - pose;
+        tmp = poseErr;
+        tmp(3) = rad2deg(tmp(3));
+        fprintf('ScanMatcher: Scan %d pose err: ', scanIdx);
+        fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
+        
     end
     path(end+1,:) = pose;
     
@@ -331,38 +335,38 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             axis equal
             title(['High-resolution lookup table, Scan: ' num2str(scanIdx)]);
         case 2  % PSM
-            change_current_figure(3);
-            cla
-            
-            iters = 1:iter;
-            
-            subplot(4,1,1);
-            curticks = get(gca, 'XTick');
-            set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
-            plot(iters, dxs(iters), 'o-');
-            title('Evolution of X');
-            axis([iters(1),max(2,iters(end)),-1.2*max(abs(dxs(iters)))-.1,1.2*max(abs(dxs(iters)))+.1])
-            
-            subplot(4,1,2);
-            curticks = get(gca, 'XTick');
-            set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
-            plot(iters, dys(iters), 's-');
-            title('Evolution of Y');
-            axis([iters(1),max(2,iters(end)),-1.2*max(abs(dys(iters)))-.1,1.2*max(abs(dys(iters)))+.1])
-            
-            subplot(4,1,3);
-            curticks = get(gca, 'XTick');
-            set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
-            plot(iters, rad2deg(dths(iters)),'x-');
-            title('Evolution of Ө');
-            axis([iters(1),max(2,iters(end)),-1.2*max(abs(rad2deg(dths(iters))))-.1,1.2*max(abs(rad2deg(dths(iters))))+.1])
-            
-            subplot(4,1,4);
-            curticks = get(gca, 'XTick');
-            set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
-            plot(iters, stoperr(iters),'.-');
-            title('Evolution of Err');
-            axis([iters(1),max(2,iters(end)),-1.2*max(abs(stoperr(iters)))-.1,1.2*max(abs(stoperr(iters)))+.1])
+%             change_current_figure(3);
+%             cla
+%             
+%             iters = 1:iter;
+%             
+%             subplot(4,1,1);
+%             curticks = get(gca, 'XTick');
+%             set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+%             plot(iters, dxs(iters), 'o-');
+%             title('Evolution of X');
+%             axis([iters(1),max(2,iters(end)),-1.2*max(abs(dxs(iters)))-.1,1.2*max(abs(dxs(iters)))+.1])
+%             
+%             subplot(4,1,2);
+%             curticks = get(gca, 'XTick');
+%             set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+%             plot(iters, dys(iters), 's-');
+%             title('Evolution of Y');
+%             axis([iters(1),max(2,iters(end)),-1.2*max(abs(dys(iters)))-.1,1.2*max(abs(dys(iters)))+.1])
+%             
+%             subplot(4,1,3);
+%             curticks = get(gca, 'XTick');
+%             set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+%             plot(iters, rad2deg(dths(iters)),'x-');
+%             title('Evolution of Ө');
+%             axis([iters(1),max(2,iters(end)),-1.2*max(abs(rad2deg(dths(iters))))-.1,1.2*max(abs(rad2deg(dths(iters))))+.1])
+%             
+%             subplot(4,1,4);
+%             curticks = get(gca, 'XTick');
+%             set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+%             plot(iters, stoperr(iters),'.-');
+%             title('Evolution of Err');
+%             axis([iters(1),max(2,iters(end)),-1.2*max(abs(stoperr(iters)))-.1,1.2*max(abs(stoperr(iters)))+.1])
 %         case 3  % Hill Climbing
 % 
 %             % Occupancy Grid

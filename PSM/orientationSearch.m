@@ -2,10 +2,11 @@ function dth = orientationSearch(ref, newR, newBad)
     %% constants
     global PM_SEARCH_WINDOW
     global PM_MAX_ERR
-    
+    global PM_L_POINTS
+    global PM_MAX_RANGE;
     global PM_DFI
     %%
-    LARGE_NUMBER = 10000;
+    LARGE_NUMBER = PM_MAX_RANGE + 10;
     n = 0;
     k=1;
     e = 0;
@@ -13,57 +14,68 @@ function dth = orientationSearch(ref, newR, newBad)
     beta = -PM_SEARCH_WINDOW:1:PM_SEARCH_WINDOW;
     err = zeros(size(beta,2),1);
     err(:) = LARGE_NUMBER;
+    
     for di = beta
-        n = 0;
-        e = 0;
-        minI = 0; maxI=0;
         if di <= 0
             minI = -di+1;
-            maxI = min(size(ref.data,1),size(newR,1));
+            maxI = PM_L_POINTS;
         else
             minI = 1;
-            maxI = min(size(ref.data,1),size(newR,1)) - di;
+            maxI = PM_L_POINTS - di;
         end
         
-        nI = minI:maxI;
+        nI = minI:(maxI);
         rI = nI + di;
         delta = abs(newR(nI) - ref.data(rI,2));
-        delta(~(newBad(nI) == 0 & ref.bad(rI) == 0 )) = [];
+        I = ~(newBad(nI) == 0 & ref.bad(rI) == 0 & delta < PM_MAX_ERR );
+        delta(I) = [];
         if(~isempty(delta))
             err(k) = mean(delta);
         else
             err(k) = LARGE_NUMBER;
         end
+        
+        change_current_figure(7);
+        cla
+        hold on
+        plot(nI,newR(nI),'r.');
+        plot(nI,ref.data(rI,2),'g.');
+        title(['dI: ' num2str(di) ' Angle: ' num2str(rad2deg(di*PM_DFI))]);
+        hold off
+        
+        change_current_figure(6);
+        cla
+        plot(rad2deg(beta(1:k)*PM_DFI),err(1:k),'.r-')
+        drawnow;
         k = k + 1;
     end
     
     [~, imin] = min(err);
+    %imin = imin -1;
     global figs
     change_current_figure(6);
     cla
     hold on
-    plot(-3:3,err(imin-3:imin+3),'.r-')
-    dth = (beta(imin))*PM_DFI;
-    xs = [-1;0;1];
-    C = polyfit(xs, err(xs+imin),2);
-    newxs = min(xs):.1:max(xs);
-    newerr = polyval(C,newxs);
-    plot(newxs,newerr,'g-');
+    plot(rad2deg(beta*PM_DFI),err,'.r-')
+    dth = ((beta(imin)))*PM_DFI;
+    
     
     m = 0;
-    if(imin >= 2 && imin < (k))
+    if(imin >= 2 && imin < (k-1))
         xs = [-1;0;1];
         C = polyfit(xs, err(xs+imin),2);
         m = roots(polyder(C));
         newxs = min(xs):.1:max(xs);
+        newbetas = beta(min(xs+imin)):.1:beta(max(xs+imin));
         newerr = polyval(C,newxs);
-        plot(newxs,newerr,'g-');
-        plot(m,polyval(C,m),'g.');
+        plot(rad2deg(newbetas*PM_DFI),newerr,'g-');
+        plot(rad2deg(dth+m*PM_DFI),polyval(C,m),'g.');
         m = roots(polyder(C));
         if( polyval(C,m) > err(imin))
             m = 0;
         end
     end
+    
     hold off
     dth = dth+m*PM_DFI;
     %     if(imin >= 2 && imin < (k))
