@@ -1,7 +1,7 @@
 clc
 
 % Scan ROI Settings
-start         = 150;
+start         = 1;
 step          = 10; % Scans
 numberOfScans = 100000;
 skip          = 1; % Points
@@ -11,7 +11,12 @@ skip          = 1; % Points
 usePrevOffsetAsGuess = true;
 useScan2World = true;
 connectTheDots = true;
-ConnectDist = 0.01;
+ConnectDist = 0.02;
+plotit = true;
+          
+% Hill Climing
+searchStep = 0.1;
+maxIterations = 15;
 
 % Algorithm Specific Overrides
 switch algo
@@ -186,16 +191,18 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             fprintf('PSM: %d iterations with %g error\n', iter, err)
             
 
-        case 3  % Hill- Climbing                        
-            searchStep = 0.1;
-            maxIterations = 30;
+        case 3  % Hill- Climbing  
             
-            while searchStep > 0.03
-                T = init_guess;            
-                [T, ~    ] = hcm(T, scan, map, 'pixelSize', searchStep      , 'maxIterations', maxIterations);
-                searchStep = searchStep * .5;
-            end
+            %while searchStep > 0.03
+            %    T = init_guess;            
+            %    [T, ~    ] = hcm(T, scan, map, 'pixelSize', searchStep      , 'maxIterations', maxIterations);
+            %    searchStep = searchStep * .5;
+            %end
             
+            
+            T = init_guess;
+            [T, ~    ] = hcm(T, scan, map, 'pixelSize', searchStep      , 'maxIterations', maxIterations);
+                
     end
     fprintf('ScanMatcher: Scan %d matched in %.1f seconds. \n', scanIdx, toc(ScanMatch))
     
@@ -277,21 +284,23 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     end
     
     
-    
-    % Plot World
-    change_current_figure(1);
-    cla
-    hold on
-    plot(world(:,1), world(:,2), 'k.', 'MarkerSize', 1)
-    plot(path(:,1), path(:,2), 'r.')
-    axis equal
-    title(['Scan: ' num2str(scanIdx)]);
-    
+    if plotit 
+        % Plot World
+        change_current_figure(1);
+        cla
+        hold on
+        plot(world(:,1), world(:,2), 'k.', 'MarkerSize', 1)
+        plot(path(:,1), path(:,2), 'r.')
+        axis equal
+        title(['Scan: ' num2str(scanIdx)]);
+    end
     
     % Plot Transformed and Map and Scans
-    change_current_figure(2);
-    cla
-    hold on
+    if plotit
+        change_current_figure(2);
+        cla
+        hold on
+    end
     
     tempMap = [];
     switch algo
@@ -302,81 +311,83 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             tempMap = map;
     end
     
-    plot(tempMap(:,1),tempMap(:,2),'r.', 'MarkerSize', 1)
-    if useScan2World
-        plot(scanWorldFrame(:,1),scanWorldFrame(:,2),'b.', 'MarkerSize', 1)
-    else
-        plot(tempScan(:,1),tempScan(:,2),'b.', 'MarkerSize', 1)
+    if plotit
+        plot(tempMap(:,1),tempMap(:,2),'r.', 'MarkerSize', 1)
+        if useScan2World
+            plot(scanWorldFrame(:,1),scanWorldFrame(:,2),'b.', 'MarkerSize', 1)
+        else
+            plot(tempScan(:,1),tempScan(:,2),'b.', 'MarkerSize', 1)
+        end
+        plot(tempL(:,1),tempL(:,2),'g.', 'MarkerSize', 1)
+        hold off
+        axis equal
+        title(['Scan: ' num2str(scanIdx)]);
+        legend('Reference', 'Current Scan', 'Registered Scan')
     end
-    plot(tempL(:,1),tempL(:,2),'g.', 'MarkerSize', 1)
-    hold off
-    axis equal
-    title(['Scan: ' num2str(scanIdx)]);
-    legend('Reference', 'Current Scan', 'Registered Scan')
-    
     
     % Algorithm specific plots
-    switch algo
-        case 1  % Olson
-            
-            % Low-resolution lookup table
-            change_current_figure(3);
-            cla
-            imagesc(imrotate(lookupTable_l,90))
-            colormap(bone)
-            axis equal
-            title(['Low-resolution lookup table, Scan: ' num2str(scanIdx)]);
-            
-            % High resolution lookup table
-            change_current_figure(4);
-            cla
-            imagesc(imrotate(lookupTable_h,90))
-            colormap(bone)
-            axis equal
-            title(['High-resolution lookup table, Scan: ' num2str(scanIdx)]);
-        case 2  % PSM
-%             change_current_figure(3);
-%             cla
-%             
-%             iters = 1:iter;
-%             
-%             subplot(4,1,1);
-%             curticks = get(gca, 'XTick');
-%             set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
-%             plot(iters, dxs(iters), 'o-');
-%             title('Evolution of X');
-%             axis([iters(1),max(2,iters(end)),-1.2*max(abs(dxs(iters)))-.1,1.2*max(abs(dxs(iters)))+.1])
-%             
-%             subplot(4,1,2);
-%             curticks = get(gca, 'XTick');
-%             set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
-%             plot(iters, dys(iters), 's-');
-%             title('Evolution of Y');
-%             axis([iters(1),max(2,iters(end)),-1.2*max(abs(dys(iters)))-.1,1.2*max(abs(dys(iters)))+.1])
-%             
-%             subplot(4,1,3);
-%             curticks = get(gca, 'XTick');
-%             set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
-%             plot(iters, rad2deg(dths(iters)),'x-');
-%             title('Evolution of Ө');
-%             axis([iters(1),max(2,iters(end)),-1.2*max(abs(rad2deg(dths(iters))))-.1,1.2*max(abs(rad2deg(dths(iters))))+.1])
-%             
-%             subplot(4,1,4);
-%             curticks = get(gca, 'XTick');
-%             set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
-%             plot(iters, stoperr(iters),'.-');
-%             title('Evolution of Err');
-%             axis([iters(1),max(2,iters(end)),-1.2*max(abs(stoperr(iters)))-.1,1.2*max(abs(stoperr(iters)))+.1])
-%         case 3  % Hill Climbing
-% 
-%             % Occupancy Grid
-%             change_current_figure(3);
-%             cla
-%             imagesc(imrotate(ogrid.grid,90))
-%             axis equal
-%             colormap([1 1 1; 0.5 0.5 0.5; 0 0 0]);
+    if plotit
+        switch algo
+            case 1  % Olson
+
+                % Low-resolution lookup table
+                change_current_figure(3);
+                cla
+                imagesc(imrotate(lookupTable_l,90))
+                colormap(bone)
+                axis equal
+                title(['Low-resolution lookup table, Scan: ' num2str(scanIdx)]);
+
+                % High resolution lookup table
+                change_current_figure(4);
+                cla
+                imagesc(imrotate(lookupTable_h,90))
+                colormap(bone)
+                axis equal
+                title(['High-resolution lookup table, Scan: ' num2str(scanIdx)]);
+            case 2  % PSM
+    %             change_current_figure(3);
+    %             cla
+    %             
+    %             iters = 1:iter;
+    %             
+    %             subplot(4,1,1);
+    %             curticks = get(gca, 'XTick');
+    %             set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+    %             plot(iters, dxs(iters), 'o-');
+    %             title('Evolution of X');
+    %             axis([iters(1),max(2,iters(end)),-1.2*max(abs(dxs(iters)))-.1,1.2*max(abs(dxs(iters)))+.1])
+    %             
+    %             subplot(4,1,2);
+    %             curticks = get(gca, 'XTick');
+    %             set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+    %             plot(iters, dys(iters), 's-');
+    %             title('Evolution of Y');
+    %             axis([iters(1),max(2,iters(end)),-1.2*max(abs(dys(iters)))-.1,1.2*max(abs(dys(iters)))+.1])
+    %             
+    %             subplot(4,1,3);
+    %             curticks = get(gca, 'XTick');
+    %             set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+    %             plot(iters, rad2deg(dths(iters)),'x-');
+    %             title('Evolution of Ө');
+    %             axis([iters(1),max(2,iters(end)),-1.2*max(abs(rad2deg(dths(iters))))-.1,1.2*max(abs(rad2deg(dths(iters))))+.1])
+    %             
+    %             subplot(4,1,4);
+    %             curticks = get(gca, 'XTick');
+    %             set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
+    %             plot(iters, stoperr(iters),'.-');
+    %             title('Evolution of Err');
+    %             axis([iters(1),max(2,iters(end)),-1.2*max(abs(stoperr(iters)))-.1,1.2*max(abs(stoperr(iters)))+.1])
+    %         case 3  % Hill Climbing
+    % 
+    %             % Occupancy Grid
+    %             change_current_figure(3);
+    %             cla
+    %             imagesc(imrotate(ogrid.grid,90))
+    %             axis equal
+    %             colormap([1 1 1; 0.5 0.5 0.5; 0 0 0]);
+        end
     end
-    
     
     
     % Select the map for the next scan
