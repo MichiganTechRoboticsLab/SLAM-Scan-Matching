@@ -9,15 +9,24 @@ load('../datasets/hallroomvn.mat')
 
 % Set up paths
 wd = pwd;
-addpath( wd, [wd '/GICP'], [wd '/Olson'], [wd '/PSM'], [wd '/hill'], [wd '/util'])
+addpath( wd, [wd '/GICP'], ...
+             [wd '/Olson'], ...
+             [wd '/PSM'], ...
+             [wd '/hill'], ...
+             [wd '/ICP'], ...
+             [wd '/ICP/libicp/matlab'], ...
+             [wd '/ICP/icp1'], ...
+             [wd '/util']);
 
 % Set up default function
 % 0: GICP
 % 1: Olsen
 % 2: PSM 
 % 3: Hill-Climbing
+% 4: LIBICP
+% 5: ICP1
 
-algo = 1;
+algo = 4;
 
 
 

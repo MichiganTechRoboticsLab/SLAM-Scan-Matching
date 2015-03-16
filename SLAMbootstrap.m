@@ -2,7 +2,7 @@ clc
 
 % Scan ROI Settings
 start         = 1;
-step          = 10; % Scans
+step          = 5; % Scans
 numberOfScans = 100000;
 skip          = 1; % Points
 
@@ -10,13 +10,12 @@ skip          = 1; % Points
 % Framework Options
 usePrevOffsetAsGuess = true;
 useScan2World = true;
-connectTheDots = true;
-ConnectDist = 0.02;
-plotit = false;
+connectTheDots = false;
+ConnectDist = 0.03;
+plotit = true;
           
-% Hill Climing
-searchStep = 0.1;
-maxIterations = 15;
+% Algorithm Specific
+maxIterations = 50;
 
 % Algorithm Specific
 switch algo
@@ -121,7 +120,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         
         % Limit number of points in the map
         I = randsample(size(map,1), min(size(map,1), 8000));
-        map = map(I,:);
+        %map = map(I,:);
     end
     
     if connectTheDots
@@ -205,8 +204,44 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             %end
             
             
+            searchStep = 0.1;
+            maxIterations = 15;
             [T, ~    ] = hcm(T, scan, map, 'pixelSize', searchStep      , 'maxIterations', maxIterations);
-                
+        
+            
+        case 4 % libicp
+           
+            ti = [ cos(T(3)) -sin(T(3)) T(1) ;
+                   sin(T(3))  cos(T(3)) T(2) ;
+                   0          0         1    ];
+            
+            % too many seg faults.....
+            t = icpMex(map', scan', ti, 0.2, 'point_to_point');
+            
+            T(1) = t(1,3);
+            T(2) = t(2,3);
+            T(3) = atan2(t(2,1), t(1,1));
+            
+        
+        case 5 % ICP1
+            
+            tt = [ T(1); T(2); 0];            
+            tr = [ cos(T(3)) -sin(T(3)) 0 ;
+                   sin(T(3))  cos(T(3)) 0 ;
+                   0          0         1 ];
+               
+            p = [map  zeros(size(map ,1), 1)]';
+            q = [scan zeros(size(scan,1), 1)]';
+            
+            [tr, tt] = icp1(p, q, maxIterations, tt, tr, ...
+                            'Matching', 'kDtree', ...
+                            'Minimize', 'point', ...
+                            'WorstRejection', 0.1);
+                        
+            T(1) = tt(1);
+            T(2) = tt(2);
+            T(3) = atan2(tr(2,1), tr(1,1));
+            
     end
     fprintf('ScanMatcher: Scan %d matched in %.1f seconds. \n', scanIdx, toc(ScanMatch))
     
@@ -415,9 +450,24 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     end
     
     
-    drawnow
-    pause(.1)
+    if plotit
+        drawnow
+        %pause(.1)
+    end
 end
 
 toc(startTime)
+
+
+
+
+% Plot World
+change_current_figure(1);
+cla
+hold on
+plot(world(:,1), world(:,2), 'k.', 'MarkerSize', 1)
+plot(path(:,1), path(:,2), 'r.')
+axis equal
+title(['Scan: ' num2str(scanIdx)]);
+
 
