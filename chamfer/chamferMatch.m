@@ -18,14 +18,20 @@ function [ T ] = chamferMatch( T, scan, map, varargin)
     dTheta      = p.Results.dTheta;
     
     
+    
     % Generate Occupancy Grid
+    lookupTableTic = tic;
     ogrid = oGrid(map, [], pixelSize);
     
     % Generate chamfer distance map
     [Dmap, ~] = bwdist(ogrid.grid);
     
+    fprintf('Chamfer: DistMap generation took %.1f seconds. \n', toc(lookupTableTic))
+
+
     
     % Exhaustive Search
+    searchTic = tic;
     bestScore = 10e+20;
     for theta = [0 (-thetaRange:dTheta:thetaRange)] + T(1,3)
         
@@ -89,6 +95,9 @@ function [ T ] = chamferMatch( T, scan, map, varargin)
         end
     end
     
+    
+    fprintf('Chamfer: Search took %.1f seconds. \n', toc(searchTic))
+
     
 %     % Debug plot of D & I maps
 %     plotItteration( 5, ogrid, map, scan, T(end,:), bestScore )   
