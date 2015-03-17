@@ -5,8 +5,8 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
 
     % Read optional parameters
     p = inputParser;
-    p.addParameter('pixelSize'    ,  1, @(x)isnumeric(x));
-    p.addParameter('maxIterations', 20, @(x)isnumeric(x));
+    p.addParameter('pixelSize'    ,  0.20, @(x)isnumeric(x));
+    p.addParameter('maxIterations', 20   , @(x)isnumeric(x));
     p.parse(varargin{:})
 
     pixelSize     = p.Results.pixelSize;
@@ -15,8 +15,16 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
     % Initial values
     T(1,:) = guess;
     
+    %guess = [1 0 0];
+    
     ogrid = oGrid(map, [], pixelSize);
     
+    % Current Scan @ Initial Guess ( for debug plotting )
+    theta = guess(3);
+    m = [cos(theta) -sin(theta);
+         sin(theta)  cos(theta)] ;
+    initialScan = (scan * m' + repmat( guess(1:2), size(scan,1), 1)) ;
+
    
     for iter = 1:maxIterations
         % Gauss-Newton gradient Decent
@@ -144,7 +152,7 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
 
 
         if 1
-    %         >> C++ Implementation: http://goo.gl/PLE2Ie
+    %       >> C++ Implementation: http://goo.gl/PLE2Ie
 
     %       Eigen::Affine2f transform(getTransformForState(pose));
     % 
@@ -223,14 +231,17 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
         
         
         
-        if isnan(dt)
+        if sum(isnan(dt)) > 0
             break;
         end
         
-        
+         dt(3) = dt(3) * 0.5;
+         dt(3) = min(dt(3),  deg2rad(1));
+         dt(3) = max(dt(3), -deg2rad(1));
+         
         % Simulated annealing
-        if 0
-            temp = (maxIterations-(iter/2))/(maxIterations);
+        if 1
+            temp = (maxIterations-iter)/(maxIterations+1);
             dt = dt * temp;
         end
         
@@ -239,8 +250,6 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
 %         dt(1) = max(dt(1), -0.1);
 %         dt(2) = min(dt(2),  0.1);
 %         dt(2) = max(dt(2), -0.1);
-         dt(3) = min(dt(3),  0.1);
-         dt(3) = max(dt(3), -0.1);
 
         % convert to meters
         dt(1) = dt(1) * pixelSize;
@@ -249,14 +258,13 @@ function [ T, ogrid ] = hcm( guess, scan, map, varargin)
         % Move in the direction of the gradient
         % T = guess + dt';
         T(iter + 1, :) = T(iter, :) + dt';
-        %T(iter + 1, 3) = T(iter, 3) + dt(3);
         
         
         % DEBUGGING ONLY %
 
         %fprintf('dt = %.4f %.4f %.4f\n', dt(1), dt(2), rad2deg(dt(3)) )
         
-        %plotItteration( 4, ogrid, map, scan, T(iter+1,:), err )
+        %plotItteration( 4, ogrid, map, initialScan, T(iter+1,:), err )
         
         
         % Convergence Criteria

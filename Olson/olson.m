@@ -56,9 +56,15 @@ function [ T, mapTable] = olson(guess, scan, map, varargin)
         maxScore = 0;
         
         % Rotate the current scan to the search location
+        %theta = thetas(i);
+        %R = [cos(theta), -sin(theta); sin(theta), cos(theta)];
+        %tempTheta = scan * R;
+        
         theta = thetas(i);
-        R = [cos(theta), -sin(theta); sin(theta), cos(theta)];
-        tempTheta = scan * R;
+        R = [ cos(theta) -sin(theta) ;
+              sin(theta)  cos(theta) ];
+        tempTheta  = (R * scan')';
+        
 
         % Search the translation space
         for x = [0, -xRange:pixelSize:xRange]  + X0

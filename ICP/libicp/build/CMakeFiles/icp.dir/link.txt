@@ -1,0 +1,1 @@
+/usr/bin/c++   -O3 -DNDEBUG    CMakeFiles/icp.dir/src/kdtree.cpp.o CMakeFiles/icp.dir/src/demo.cpp.o CMakeFiles/icp.dir/src/icpPointToPlane.cpp.o CMakeFiles/icp.dir/src/icp.cpp.o CMakeFiles/icp.dir/src/icpPointToPoint.cpp.o CMakeFiles/icp.dir/src/matrix.cpp.o  -o icp -rdynamic 
