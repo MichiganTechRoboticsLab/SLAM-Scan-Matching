@@ -16,7 +16,7 @@ function adjscan = fillLidarData(scan, lidarRangeTheta,  ptDist)
 
     % ??? This is part of the magic that determines if two lines are
     % connected or not....
-    normalizer = 0.75;
+    normalizer = 1;
     alpha = sin(anlgeStep)/sin(theta)*normalizer;
 
     % Resulting point set
@@ -38,7 +38,7 @@ function adjscan = fillLidarData(scan, lidarRangeTheta,  ptDist)
             
             % Use linspace to make sure there is at least one point each 
             % ptDist between them.
-            n = ceil(mag(a,b)/ptDist);
+            n = max(2, ceil(mag(a,b)/ptDist));
             x = linspace(a(1), b(1), n)';
             y = linspace(a(2), b(2), n)';
 
