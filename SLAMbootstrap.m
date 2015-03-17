@@ -12,7 +12,7 @@ usePrevOffsetAsGuess = true;
 useScan2World = true;
 connectTheDots = false;
 ConnectDist = 0.1;
-plotit = true;
+plotit = false;
           
 % Algorithm Specific
 switch algo
@@ -246,15 +246,24 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
        
             
         case 6
-            T = chamferMatch(T, scan, map, ...
-                'thetaRange', deg2rad(4),   ...
-                'dTheta', deg2rad(4)/20,      ...
-                                            ...
-                'xRange', 0.2,              ...
-                'yRange', 0.2,              ...
-                'pixelSize', 0.2/20);
             
-
+            
+            r = deg2rad(4);
+            t = 0.2;
+                
+            for i = 1:4              
+                
+                T = chamferMatch(T, scan, map, ...
+                    'thetaRange', r,           ...
+                    'dTheta', r/2,             ...
+                                               ...
+                    'xRange', t,               ...
+                    'yRange', t,               ...
+                    'pixelSize', t/2);
+                
+                r = r/2;
+                t = t/2;
+            end
         
             
     end
