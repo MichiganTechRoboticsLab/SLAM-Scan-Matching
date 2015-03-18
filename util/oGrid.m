@@ -60,7 +60,11 @@ function [ ogrid ] = oGrid( pts, ~, pixelSize)
     hits = round(hits);
     
     %hits = unique(hits, 'rows');
-    i = sub2ind(size(ogrid.grid), hits(:,1), hits(:,2));
+    %i = sub2ind(size(ogrid.grid), hits(:,1), hits(:,2));
+    
+    siz = size(ogrid.grid);
+    i = hits(:,1) + (hits(:,2) - 1).*siz(1);
+    
     ogrid.grid(i) = 1;
     
     

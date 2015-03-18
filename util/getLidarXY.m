@@ -3,12 +3,12 @@ function [pts] = getLidarXY(nScan, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar
 %nScanIndex = unique(Lidar_ScanIndex);
 
 
-p = inputParser;
-p.addParameter('LidarRange', 30, @(x)isnumeric(x));
-
-p.parse(varargin{:})
-
-LidarRange = p.Results.LidarRange;
+% p = inputParser;
+% p.addParameter('LidarRange', 30, @(x)isnumeric(x));
+% 
+% p.parse(varargin{:})
+% 
+% LidarRange = p.Results.LidarRange;
 
 % Retrieve each scan's points
 nIndex = nScanIndex(nScan);

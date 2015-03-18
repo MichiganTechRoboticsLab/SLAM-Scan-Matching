@@ -1,8 +1,10 @@
 clc
 
+profile on
+
 % Scan ROI Settings
 start         = 1;
-step          = 1; % Scans
+step          = 10; % Scans
 numberOfScans = 100000;
 skip          = 1; % Points
 
@@ -13,10 +15,11 @@ useScan2World = true;
 connectTheDots = false;
 ConnectDist = 0.1;
 plotit = false;
+verbose = false;
 
 % Chamfer-SLAM
-rmin = deg2rad(0.1);
-tmin = 0.05;
+rmin = deg2rad(.25);
+tmin = 0.03;
 
 
 % Algorithm Specific
@@ -58,7 +61,9 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     % Display current scan index
     fprintf('ScanMatcher: Scan %d\n', scanIdx);
     
-    ScanPreMatch = tic;
+    if verbose
+        ScanPreMatch = tic;
+    end
     
     % Get Current Scan
     switch algo
@@ -123,7 +128,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         map = map(map(:,2) < max(scanWorldFrame(:,2)) + borderSize, :);
         
         % Limit number of points in the map
-        I = randsample(size(map,1), min(size(map,1), 8000));
+        %I = randsample(size(map,1), min(size(map,1), 8000));
         %map = map(I,:);
     end
     
@@ -142,12 +147,12 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
     % Initial Guess
     T = init_guess;
     
-    
-    fprintf('ScanMatcher:  PreMatch took %.4f seconds. \n', toc(ScanPreMatch))
-    
+    if verbose
+        fprintf('ScanMatcher:  PreMatch took %.4f seconds. \n', toc(ScanPreMatch))
+        ScanMatch = tic;
+    end
     
     % Scan Matching Algo
-    ScanMatch = tic;
     switch algo
         case 0
             T = gicp(init_guess, scan(1:skip:end,:), map(1:skip:end,:), 'minMatchDist', 2, 'costThresh', .00001);
@@ -263,6 +268,8 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             % This is equivilant to a hi-lo search
             r = max(deg2rad(4)*(step/20), rmin);
             t = max(0.2       *(step/20), tmin);
+            %r = rmin;
+            %t = tmin;
             
             while t >= tmin || r >= rmin          
             %for i = 1:3    
@@ -273,18 +280,25 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
                     'xRange', t,               ...
                     'yRange', t,               ...
                     'pixelSize', t,            ...
-                    'verbose', false );
+                    'verbose', verbose );
                 
-                r = r/2;
-                t = t/2;
+               r = r/2;
+               t = t/2;
             end
         
             
     end
-    fprintf('ScanMatcher:     Match took %.4f seconds. \n', toc(ScanMatch))
+    
+    if verbose
+        fprintf('ScanMatcher:     Match took %.4f seconds. \n', toc(ScanMatch))
+        ScanPostMatch = tic;
+    end
     
     
-    ScanPostMatch = tic;
+    
+    
+    
+    
     
     
     % Update current pose
@@ -495,10 +509,11 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         %pause(.1)
     end
     
-    
-    fprintf('ScanMatcher: PostMatch took %.4f seconds. \n', toc(ScanPostMatch))
-    
+    if verbose
+        fprintf('ScanMatcher: PostMatch took %.4f seconds. \n', toc(ScanPostMatch))
+    end
 end
+
 
 toc(startTime)
 
@@ -507,14 +522,17 @@ toc(startTime)
 
 % Plot World
 change_current_figure(1);
-cla
+clf
 hold on
 plot(world(:,1), world(:,2), 'k.', 'MarkerSize', 1)
-plot(path(:,1), path(:,2), 'r.')
+plot(path(:,1), path(:,2), 'r.');
 axis equal
 title(['Scan: ' num2str(scanIdx)]);
-print('../World','-dpng');
 
+%print('../World','-dpng');
+hgsave('../World')
+
+toc(startTime)
 
 % Plot dT
 n = 1;
@@ -534,6 +552,8 @@ title('Z: diff(path(:,3),n)')
 print('../pathDiff1','-dpng');
 
 
+toc(startTime)
+
 % Plot dT2
 n = 2;
 change_current_figure(3);
@@ -551,4 +571,7 @@ plot(diff(path(:,3),n), 'b.')
 title('Z: diff(path(:,3),n)')
 print('../pathDiff2','-dpng');
 
+toc(startTime)
 
+profile off
+profsave;
