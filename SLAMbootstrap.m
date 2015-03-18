@@ -16,7 +16,7 @@ plotit = false;
 
 % Chamfer-SLAM
 rmin = deg2rad(1);
-tmin = 0.05;
+tmin = 0.05; 
 
 
 % Algorithm Specific
