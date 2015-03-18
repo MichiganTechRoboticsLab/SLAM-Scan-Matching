@@ -2,7 +2,7 @@ clc
 
 % Scan ROI Settings
 start         = 1;
-step          = 20; % Scans
+step          = 1; % Scans
 numberOfScans = 100000;
 skip          = 1; % Points
 
@@ -13,7 +13,12 @@ useScan2World = true;
 connectTheDots = false;
 ConnectDist = 0.1;
 plotit = false;
-          
+
+% Chamfer-SLAM
+rmin = deg2rad(1);
+tmin = 0.05;
+
+
 % Algorithm Specific
 switch algo
     case 2
@@ -248,18 +253,20 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         case 6
             
             
-            r = deg2rad(4);
-            t = 0.2;
-                
-            for i = 1:4              
-                
+            % This is equivilant to a hi-lo search
+            r = max(deg2rad(4)*(step/20), rmin);
+            t = max(0.2       *(step/20), tmin);
+            
+            while t >= tmin || r >= rmin          
+            %for i = 1:3    
                 T = chamferMatch(T, scan, map, ...
                     'thetaRange', r,           ...
-                    'dTheta', r/2,             ...
+                    'dTheta', r,               ...
                                                ...
                     'xRange', t,               ...
                     'yRange', t,               ...
-                    'pixelSize', t/2);
+                    'pixelSize', t,            ...
+                    'verbose', true );
                 
                 r = r/2;
                 t = t/2;
@@ -493,5 +500,42 @@ plot(world(:,1), world(:,2), 'k.', 'MarkerSize', 1)
 plot(path(:,1), path(:,2), 'r.')
 axis equal
 title(['Scan: ' num2str(scanIdx)]);
+print('../World','-dpng');
+
+
+% Plot dT
+n = 1;
+change_current_figure(2);
+clf
+subplot(3,1,1);
+plot(diff(path(:,1),n), 'r.')
+title('X: diff(path(:,1),n)')
+
+subplot(3,1,2);
+plot(diff(path(:,2),n), 'g.')
+title('Y: diff(path(:,2),n)')
+
+subplot(3,1,3);
+plot(diff(path(:,3),n), 'b.')
+title('Z: diff(path(:,3),n)')
+print('../pathDiff1','-dpng');
+
+
+% Plot dT2
+n = 2;
+change_current_figure(3);
+clf
+subplot(3,1,1);
+plot(diff(path(:,1),n), 'r.')
+title('X: diff(path(:,1),n)')
+
+subplot(3,1,2);
+plot(diff(path(:,2),n), 'g.')
+title('Y: diff(path(:,2),n)')
+
+subplot(3,1,3);
+plot(diff(path(:,3),n), 'b.')
+title('Z: diff(path(:,3),n)')
+print('../pathDiff1','-dpng');
 
 

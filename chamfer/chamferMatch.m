@@ -7,8 +7,9 @@ function [ T ] = chamferMatch( T, scan, map, varargin)
     p.addParameter('pixelSize' ,         0.05  , @(x)isnumeric(x));
     p.addParameter('xRange'    ,         0.4   , @(x)isnumeric(x));
     p.addParameter('yRange'    ,         0.4   , @(x)isnumeric(x));
-    p.addParameter('thetaRange', deg2rad(12    ), @(x)isnumeric(x));
-    p.addParameter('dTheta'    , deg2rad(1 ), @(x)isnumeric(x));
+    p.addParameter('thetaRange', deg2rad(12   ), @(x)isnumeric(x));
+    p.addParameter('dTheta'    , deg2rad(1    ), @(x)isnumeric(x));
+    p.addParameter('verbose'   , false         , @(x)islogical(x));
     p.parse(varargin{:})
 
     pixelSize   = p.Results.pixelSize;
@@ -16,8 +17,8 @@ function [ T ] = chamferMatch( T, scan, map, varargin)
     yRange      = p.Results.yRange;
     thetaRange  = p.Results.thetaRange;
     dTheta      = p.Results.dTheta;
+    verbose     = p.Results.verbose;
     
-    verbose = false;
     
     % Generate Occupancy Grid
     lookupTableTic = tic;
