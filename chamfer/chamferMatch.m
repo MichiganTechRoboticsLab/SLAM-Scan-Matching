@@ -21,21 +21,34 @@ function [ T ] = chamferMatch( T, scan, map, varargin)
     
     
     % Generate Occupancy Grid
-    lookupTableTic = tic;
+    if verbose
+        lookupTableTic = tic;
+    end
+    
     ogrid = oGrid(map, [], pixelSize);
     
-    % Generate chamfer distance map
+    if verbose
+        fprintf('Chamfer: oGrid generation took %.4f seconds. \n', toc(lookupTableTic))
+    end
+    
+    % Generate chamfer distance map    
+    if verbose
+        lookupTableTic = tic;
+    end;
+    
     [Dmap, ~] = bwdist(ogrid.grid);
     
     if verbose
-        fprintf('Chamfer: DistMap generation took %.1f seconds. \n', toc(lookupTableTic))
+        fprintf('Chamfer: DistMap generation took %.4f seconds. \n', toc(lookupTableTic))
     end
 
     
     % Exhaustive Search
-    searchTic = tic;
+    if verbose
+        searchTic = tic;
+    end
     bestScore = 10e+20;
-    for theta = [(-thetaRange:dTheta:thetaRange)] + T(1,3)
+    for theta = (-thetaRange:dTheta:thetaRange) + T(1,3)
         
         % Rotate
         m = [cos(theta) -sin(theta);
@@ -44,8 +57,8 @@ function [ T ] = chamferMatch( T, scan, map, varargin)
         
         
         
-        for x = ([-xRange:pixelSize:xRange] + T(1,1));
-            for y = ([-yRange:pixelSize:yRange] + T(1,2))
+        for x = (-xRange:pixelSize:xRange) + T(1,1);
+            for y = (-yRange:pixelSize:yRange) + T(1,2)
                 
                 s = S + repmat([x y], size(S,1), 1);
                 
@@ -99,7 +112,7 @@ function [ T ] = chamferMatch( T, scan, map, varargin)
     
     
     if verbose
-        fprintf('Chamfer: Search took %.1f seconds. \n', toc(searchTic))
+        fprintf('Chamfer: Search took %.4f seconds. \n', toc(searchTic))
     end
     
 %     % Debug plot of D & I maps
