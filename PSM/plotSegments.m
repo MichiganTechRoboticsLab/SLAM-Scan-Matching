@@ -88,7 +88,7 @@ function plotSegments(ls, ref)
         occludedI = bitand(ref.bad,bad(4))~=0;
         emptyI = bitand(ref.bad,bad(5))~=0;
         nSegs = unique(ref.seg);
-        CM = jet(size(nSegs,1)+1);
+        CM = hsv(size(nSegs,1)+1);
         change_current_figure(4)
 %         cla reset
         hold on

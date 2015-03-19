@@ -2,15 +2,9 @@
 % close all
 
 % Load sensor dataset
-
-% load('../data/hallroomvn.mat')
+load('../data/hallroomvn.mat')
 load('testData/testWorldPSM.mat')
-% load('testData/testworld.mat')
-
-load('../datasets/hallroomvn.mat')
-%load('testData/testWorldPSM.mat')
 %load('testData/testworld.mat')
-
 
 
 % Set up paths
@@ -34,11 +28,11 @@ addpath( wd, [wd '/GICP'], ...
 % 5: ICP1
 % 6: Chamfer
 
-algo = 6;
+algo = 2;
 
 
 
-useSimWorld = false;
+useSimWorld = true;
 
 if (~exist('init','var') || init == false)
     if (exist('useSimWorld','var') && useSimWorld == true)

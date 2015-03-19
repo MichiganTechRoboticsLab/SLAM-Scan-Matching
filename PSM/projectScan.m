@@ -13,7 +13,7 @@ function [scan, newR, newBad] = projectScan(scan)
     global PM_FI
     %%
     newR = zeros(size(scan.data,1),1);
-    LARGE_NUMBER = PM_MAX_RANGE + 10;
+    LARGE_NUMBER = PM_MAX_RANGE;
     newR(:) = LARGE_NUMBER;
     newBad = zeros(size(scan.data,1),1);
     newBad = bitset(newBad, PM_EMPTY);
@@ -23,30 +23,30 @@ function [scan, newR, newBad] = projectScan(scan)
     x = scan.data(:,2) .* cos(delta) + scan.rx;
     y = scan.data(:,2) .* sin(delta) + scan.ry;
     [fi, r] = cart2pol(x, y);
-    fi(x < 0 & y < 0) = fi(x < 0 & y < 0) + 2*pi;
+%     fi(x < 0 & y < 0) = fi(x < 0 & y < 0) + 2*pi;
 
     % INTERPOLATION
     for i = 2:size(newR,1)
         if(scan.seg(i) ~= 0 && scan.seg(i) == scan.seg(i-1) && scan.bad(i) == 0 && scan.bad(i-1) == 0 ) % && fi(i)>PM_FI_MIN && fi(i-1) > PM_FI_MIN
             occluded = false;
             j0 = 0; j1 = 0; r0 = 0; r1 = 0; a0 = 0; a1 = 0;
-            if(abs(fi(i) - fi(i-1)) >= pi)
-                 continue;
-            end
+%             if(abs(fi(i) - fi(i-1)) >= pi)
+%                  continue;
+%             end
             if( fi(i) > fi(i-1) )
                 occluded = false;
                 a0 = fi(i-1);
                 a1 = fi(i);
-                j0 = ceil( (fi(i-1) - PM_FI_MIN) / PM_DFI) + 1;
-                j1 = floor( (fi(i) - PM_FI_MIN) / PM_DFI) + 1;
+                j0 = ceil( (fi(i-1) - PM_FI_MIN) / PM_DFI) + 1;% + 2;
+                j1 = floor( (fi(i) - PM_FI_MIN) / PM_DFI) + 1;% + 2;
                 r0 = r(i-1);
                 r1 = r(i);
             else
                 occluded = true;
                 a0 = fi(i);
                 a1 = fi(i-1);
-                j0 = ceil( (fi(i) - PM_FI_MIN) / PM_DFI) + 1;
-                j1 = floor( (fi(i-1) - PM_FI_MIN) / PM_DFI) + 1;
+                j0 = ceil( (fi(i) - PM_FI_MIN) / PM_DFI) + 1;% + 2;
+                j1 = floor( (fi(i-1) - PM_FI_MIN) / PM_DFI) + 1;% + 2;
                 r0 = r(i);
                 r1 = r(i-1);
             end
