@@ -2,7 +2,7 @@ clc
 
 % Scan ROI Settings
 start         = 1;
-step          = 5; % Scans
+step          = 20; % Scans
 numberOfScans = 100000;
 skip          = 1; % Points
 
@@ -12,13 +12,9 @@ skip          = 1; % Points
 usePrevOffsetAsGuess = true;
 useScan2World = true;
 connectTheDots = false;
-ConnectDist = 0.03;
-plotit = true;
-
-% Algorithm Specific
-maxIterations = 50;
-
-
+ConnectDist = 0.1;
+plotit = false;
+          
 % Algorithm Specific
 switch algo
     case 2
@@ -208,16 +204,18 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
 
             searchStep = 0.1;
             maxIterations = 15;
-            [T, ~    ] = hcm(T, scan, map, 'pixelSize', searchStep      , 'maxIterations', maxIterations);
-
-
+            [T, ~    ] = hcm(T, scan, map, ...
+                             'pixelSize'    , searchStep, ...
+                             'maxIterations', maxIterations);
+        
+            
         case 4 % libicp
 
             ti = [ cos(T(3)) -sin(T(3)) T(1) ;
                    sin(T(3))  cos(T(3)) T(2) ;
                    0          0         1    ];
-
-            % too many seg faults.....
+            
+            % Often seg faults.....
             t = icpMex(map', scan', ti, 0.2, 'point_to_point');
 
             T(1) = t(1,3);
@@ -226,15 +224,18 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
 
 
         case 5 % ICP1
-
-            tt = [ T(1); T(2); 0];
+            
+            maxIterations = 30;
+            
+            tt = [ T(1);      T(2);     0 ];            
             tr = [ cos(T(3)) -sin(T(3)) 0 ;
                    sin(T(3))  cos(T(3)) 0 ;
                    0          0         1 ];
 
             p = [map  zeros(size(map ,1), 1)]';
             q = [scan zeros(size(scan,1), 1)]';
-
+            
+            % Kinda slow...
             [tr, tt] = icp1(p, q, maxIterations, tt, tr, ...
                             'Matching', 'kDtree', ...
                             'Minimize', 'point', ...
@@ -243,7 +244,29 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
             T(1) = tt(1);
             T(2) = tt(2);
             T(3) = atan2(tr(2,1), tr(1,1));
-
+       
+            
+        case 6
+            
+            
+            r = deg2rad(4);
+            t = 0.2;
+                
+            for i = 1:4              
+                
+                T = chamferMatch(T, scan, map, ...
+                    'thetaRange', r,           ...
+                    'dTheta', r/2,             ...
+                                               ...
+                    'xRange', t,               ...
+                    'yRange', t,               ...
+                    'pixelSize', t/2);
+                
+                r = r/2;
+                t = t/2;
+            end
+        
+            
     end
     fprintf('ScanMatcher: Scan %d matched in %.1f seconds. \n', scanIdx, toc(ScanMatch))
 
