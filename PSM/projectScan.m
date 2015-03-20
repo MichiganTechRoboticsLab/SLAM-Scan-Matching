@@ -23,7 +23,7 @@ function [scan, newR, newBad] = projectScan(scan)
     x = scan.data(:,2) .* cos(delta) + scan.rx;
     y = scan.data(:,2) .* sin(delta) + scan.ry;
     [fi, r] = cart2pol(x, y);
-%     fi(x < 0 & y < 0) = fi(x < 0 & y < 0) + 2*pi;
+   fi(x < 0 & y < 0) = fi(x < 0 & y < 0) + 2*pi;
 
     % INTERPOLATION
     for i = 2:size(newR,1)

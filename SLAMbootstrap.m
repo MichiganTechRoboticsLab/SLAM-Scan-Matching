@@ -1,5 +1,7 @@
 clc
 
+profile on
+
 % Scan ROI Settings
 start         = 1;
 step          = 1; % Scans
@@ -8,12 +10,19 @@ skip          = 1; % Points
 
 
 % Framework Options
-usePrevOffsetAsGuess = true;
+usePrevOffsetAsGuess = false;
 useScan2World = false;
 connectTheDots = false;
 ConnectDist = 0.1;
 plotit = true;
-          
+verbose = true;
+
+MaxAccelLin = 0.4;
+MaxAccelRot = deg2rad(8);
+
+RotResolution = deg2rad(.25);
+LinResolution = 0.02;
+
 % Algorithm Specific
 switch algo
     case 2
@@ -23,14 +32,27 @@ end
 
 % Initialize State Variables
 nScanIndex = unique(Lidar_ScanIndex);
-stop = start + step * numberOfScans;
+stop       = start + step * numberOfScans;
 
-map = [];
-pose = [0 0 0];
-path = [0 0 0];
-world = [];
-T = [0 0 0];
+map        = [];
+pose       = [0 0 0];
+path       = [0 0 0];
+world      = [];
+T          = [0 0 0];
 init_guess = [0 0 0];
+
+
+if usePrevOffsetAsGuess
+    rmax = max(MaxAccelRot*(step/40), RotResolution);
+    tmax = max(MaxAccelLin*(step/40), LinResolution);
+else
+    % fix me later....
+end
+
+
+% Chamfer Distance
+iterations = ceil(max(log(rmax/RotResolution)/log(2), log(tmax/LinResolution)/log(2)));
+iterations = max(iterations, 1);
 
 
 % Clear all figures before running
@@ -38,7 +60,7 @@ for i = 1:8
     if ~ishandle(i);
         figure(i);
     end
-    
+
     change_current_figure(i);
     clf;
 end
@@ -48,11 +70,15 @@ pause(0.1);
 
 % Scan Matching Loop
 startTime = tic;
-for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
-    
+for scanIdx = start:step:min(stop,size(nScanIndex,1))
+
     % Display current scan index
     fprintf('ScanMatcher: Scan %d\n', scanIdx);
-    
+
+    if verbose
+        ScanPreMatch = tic;
+    end
+
     % Get Current Scan
     switch algo
         case 2
@@ -60,12 +86,12 @@ for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
         otherwise
             scan = getLidarXY(scanIdx, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex);
     end
-    
+
     % Init World
     if isempty(map)
         % Init map and world
         map = scan;
-        
+
         tempMap = [];
         switch algo
             case 2
@@ -76,72 +102,80 @@ for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
         end
         world = tempMap;
         path = pose;
-        
-        
+
+
         if connectTheDots
             % Linear interpolation of 'connected' map points
             %m = min(sqrt(map(:,1).^2 + map(:,2).^2));
             %d = m * sin(deg2rad(270/1081));
             map = fillLidarData(map(1:skip:end,:), 270, ConnectDist);
-            
+
             % Limit number of points in the map
             %I = randsample(size(map,1), min(size(map,1), 300));
             %map = map(I,:);
         end
-        
+
         continue
     end
-    
+
     % Generate a local map from the world map
     if useScan2World
-        
+
         % Translate current scan to map coordinates
         dx    = pose(1);
         dy    = pose(2);
         theta = pose(3);
-        
+
         M = [ cos(theta) -sin(theta) dx ;
               sin(theta)  cos(theta) dy ;
               0           0          1  ];
-        
+
         scanWorldFrame = [scan(1:skip:end,:) ones(size(scan,1), 1)];
         scanWorldFrame = scanWorldFrame(1:skip:end,:) * M';
         scanWorldFrame = scanWorldFrame(:,[1,2]);
-        
+
         % extract points around the current scan for a reference map
         borderSize = 1; % (Meters)
         map = map(map(:,1) > min(scanWorldFrame(:,1)) - borderSize, :);
         map = map(map(:,1) < max(scanWorldFrame(:,1)) + borderSize, :);
         map = map(map(:,2) > min(scanWorldFrame(:,2)) - borderSize, :);
         map = map(map(:,2) < max(scanWorldFrame(:,2)) + borderSize, :);
-        
-        % Limit number of points in the map
-        I = randsample(size(map,1), min(size(map,1), 8000));
-        %map = map(I,:);
+
+%         % Limit number of points in the map
+%         MaxMapSize = 10000;
+%         if size(map,1) > MaxMapSize
+%             I = randsample(size(map,1), MaxMapSize);
+%             %I = (size(map,1)-MaxMapSize):size(map,1);
+%             map = map(I,:);
+%         end
     end
-    
+
     if connectTheDots
         % Linear interpolation of 'connected' scan points
         %m = min(sqrt(scan(:,1).^2 + scan(:,2).^2));
         %d = m * sin(deg2rad(270/1081));
         scan = fillLidarData(scan(1:skip:end,:), 270, ConnectDist);
-        
+
         % Limit number of points in the map
         %I = randsample(size(scan,1), min(size(scan,1), 300));
         %scan = scan(I,:);
     end
-    
-    
+
+
     % Initial Guess
     T = init_guess;
-    
-    
+
+    if verbose
+        fprintf('ScanMatcher:  PreMatch took %.4f seconds. \n', toc(ScanPreMatch))
+        ScanMatch = tic;
+    end
+
     % Scan Matching Algo
-    ScanMatch = tic;
     switch algo
         case 0
             T = gicp(init_guess, scan(1:skip:end,:), map(1:skip:end,:), 'minMatchDist', 2, 'costThresh', .00001);
-            
+
+
         case 1
 %             % Low Resolution
 %             [ T, lookupTable_l ] = olson(init_guess, scan(1:skip:end,:), map(1:skip:end,:), ...
@@ -154,8 +188,8 @@ for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
 %                 'xRange', 1 * step / 50,         ...
 %                 'yRange', 1 * step / 50,         ...
 %                 'pixelSize', 0.1);
-            
-            
+
+
             % High Resolution
             [ T, lookupTable_h ] = olson(T, scan(1:skip:end,:), map(1:skip:end,:), ...
                 'searchRadius', 4,          ...
@@ -167,13 +201,14 @@ for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
                 'xRange', 0.1,              ...
                 'yRange', 0.1,              ...
                 'pixelSize', 0.05);
-            
-            
+
+
             fprintf('OLSON: Final Guess: ')
             tmp = T;
             tmp(3) = rad2deg(tmp(3));
             fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
-            
+
+
         case 2
             [ T, iter, err, axs, ays, aths, errs, dxs, dys, dths, stoperr ] = psm(init_guess, scan(1:skip:end,:), map(1:skip:end,:), ...
                 'PM_STOP_COND', .4,                                               ...
@@ -181,6 +216,7 @@ for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
                 'PM_MAX_RANGE', 30,                                                  ...
                 'PM_MIN_RANGE', .1,                                                  ...
                 'PM_WEIGHTING_FACTOR', .70*.70,                                        ...
+                'PM_REDUCED_WEIGHTING_FACTOR', .10*.10,                                        ...
                 'PM_SEG_MAX_DIST', .15,                                               ...
                 'PM_CHANGE_WEIGHT_ITER', 10,                                         ...
                 'PM_MAX_ERR', 1.00,                                                    ...
@@ -190,88 +226,88 @@ for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
             tmp(3) = rad2deg(tmp(3));
             fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
             fprintf('PSM: %d iterations with %g error\n', iter, err)
-            
 
-        case 3  % Hill- Climbing  
-            
+
+        case 3  % Hill- Climbing
+
             %while searchStep > 0.03
-            %    T = init_guess;            
+            %    T = init_guess;
             %    [T, ~    ] = hcm(T, scan, map, 'pixelSize', searchStep      , 'maxIterations', maxIterations);
             %    searchStep = searchStep * .5;
             %end
-            
-            
+
+
             searchStep = 0.1;
             maxIterations = 15;
             [T, ~    ] = hcm(T, scan, map, ...
                              'pixelSize'    , searchStep, ...
                              'maxIterations', maxIterations);
-        
-            
+
+
         case 4 % libicp
-           
+
             ti = [ cos(T(3)) -sin(T(3)) T(1) ;
                    sin(T(3))  cos(T(3)) T(2) ;
                    0          0         1    ];
-            
+
             % Often seg faults.....
-            t = icpMex(map', scan', ti, 0.2, 'point_to_point');
-            
-            T(1) = t(1,3);
-            T(2) = t(2,3);
-            T(3) = atan2(t(2,1), t(1,1));
-            
-        
+            tmax = icpMex(map', scan', ti, 0.2, 'point_to_point');
+
+            T(1) = tmax(1,3);
+            T(2) = tmax(2,3);
+            T(3) = atan2(tmax(2,1), tmax(1,1));
+
+
         case 5 % ICP1
-            
+
             maxIterations = 30;
-            
-            tt = [ T(1);      T(2);     0 ];            
+
+            tt = [ T(1);      T(2);     0 ];
             tr = [ cos(T(3)) -sin(T(3)) 0 ;
                    sin(T(3))  cos(T(3)) 0 ;
                    0          0         1 ];
-               
+
             p = [map  zeros(size(map ,1), 1)]';
             q = [scan zeros(size(scan,1), 1)]';
-            
+
             % Kinda slow...
             [tr, tt] = icp1(p, q, maxIterations, tt, tr, ...
                             'Matching', 'kDtree', ...
                             'Minimize', 'point', ...
                             'WorstRejection', 0.1);
-                        
+
             T(1) = tt(1);
             T(2) = tt(2);
             T(3) = atan2(tr(2,1), tr(1,1));
-       
-            
+
+
         case 6
-            
-            
-            r = deg2rad(4);
-            t = 0.2;
-                
-            for i = 1:4              
-                
-                T = chamferMatch(T, scan, map, ...
-                    'thetaRange', r,           ...
-                    'dTheta', r/2,             ...
-                                               ...
-                    'xRange', t,               ...
-                    'yRange', t,               ...
-                    'pixelSize', t/2);
-                
-                r = r/2;
-                t = t/2;
-            end
-        
-            
+
+
+%             %r = rmin;
+%             %t = tmin;
+%
+%             while t >= tmin || r >= rmin
+            %for i = 1:3
+                T = chamferMatch(T, scan, map,     ...
+                    'dTheta'    , rmax,               ...
+                    'dLinear'   , tmax,               ...
+                    'iterations', iterations,      ...
+                    'pixelSize' , LinResolution, ...
+                    'verbose'   , verbose );
+
+%                r = r/2;
+%                t = t/2;
+%             end
+
+
     end
-    fprintf('ScanMatcher: Scan %d matched in %.1f seconds. \n', scanIdx, toc(ScanMatch))
-    
-    
-    
-    
+
+    if verbose
+        fprintf('ScanMatcher:     Match took %.4f seconds. \n', toc(ScanMatch))
+        ScanPostMatch = tic;
+    end
+
     % Update current pose
     if useScan2World
         pose = T;
@@ -288,25 +324,24 @@ for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
         % Add previous scan to pose
         pose = pose + [mapT(1:2)', T(3)];
     end
-    fprintf('ScanMatcher: Scan %d pose is ', scanIdx);
-    tmp = pose;
-    tmp(3) = rad2deg(tmp(3));
-    fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
-    if(useSimWorld)
-        goodPose = LidarPose(scanIdx,1:3);
-        tmp = goodPose;
-        tmp(3) = rad2deg(tmp(3));
-        fprintf('ScanMatcher: Scan %d pose should be ', scanIdx);
-        fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
-        poseErr = goodPose - pose;
-        tmp = poseErr;
-        tmp(3) = rad2deg(tmp(3));
-        fprintf('ScanMatcher: Scan %d pose err: ', scanIdx);
-        fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
-        
-    end
+   if(useSimWorld && verbose)
+       fprintf('ScanMatcher: Scan %d pose is ', scanIdx);
+       tmp = pose;
+       tmp(3) = rad2deg(tmp(3));
+       fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
+       goodPose = LidarPose(scanIdx,1:3);
+       tmp = goodPose;
+       tmp(3) = rad2deg(tmp(3));
+       fprintf('ScanMatcher: Scan %d pose should be ', scanIdx);
+       fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
+       poseErr = goodPose - pose;
+       tmp = poseErr;
+       tmp(3) = rad2deg(tmp(3));
+       fprintf('ScanMatcher: Scan %d pose err: ', scanIdx);
+       fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
+   end
     path(end+1,:) = pose;
-    
+
     % Make Sure Scan in proper Coordinates
     tempScan = [];
     switch algo
@@ -316,38 +351,38 @@ for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
         otherwise
             tempScan = scan;
     end
-    
+
     % Current World Pose Transform
     dx    = pose(1);
     dy    = pose(2);
     theta = pose(3);
-    
+
     Trans = [ cos(theta) -sin(theta) dx ;
               sin(theta)  cos(theta) dy ;
               0           0          1  ];
     temp =  [tempScan ones(size(tempScan,1),1)] * Trans';
-    
-    
+
+
     % Current Scan Transformation
     dx    = T(1);
     dy    = T(2);
     theta = T(3);
-    
+
     LTrans = [ cos(theta) -sin(theta) dx ;
                sin(theta)  cos(theta) dy ;
                0           0          1  ];
     tempL = [tempScan ones(size(tempScan,1),1)] * LTrans';
-    
-    
+
+
     % Add transformed data to world
     if useScan2World
         world = [world; tempL(:,1:2)];
     else
         world = [world; temp(:,1:2)];
     end
-    
-    
-    if plotit 
+
+
+    if plotit
         % Plot World
         change_current_figure(1);
         cla
@@ -357,14 +392,14 @@ for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
         axis equal
         title(['Scan: ' num2str(scanIdx)]);
     end
-    
-    % Plot Transformed and Map and Scans
-    if plotit
-        change_current_figure(2);
-        cla
-        hold on
-    end
-    
+
+   % Plot Transformed and Map and Scans
+   if plotit
+       change_current_figure(2);
+       cla
+       hold on
+   end
+
     tempMap = [];
     switch algo
         case 2
@@ -373,7 +408,7 @@ for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
         otherwise
             tempMap = map;
     end
-    
+
     if plotit
         plot(tempMap(:,1),tempMap(:,2),'r.', 'MarkerSize', 1)
         if useScan2World
@@ -388,7 +423,7 @@ for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
         legend('Reference', 'Current Scan', 'Registered Scan')
         hold off
     end
-    
+
     % Algorithm specific plots
     if plotit
         switch algo
@@ -412,30 +447,30 @@ for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
             case 2  % PSM
                 change_current_figure(3);
                 cla
-                
+
                 iters = 1:iter;
-                
+
                 subplot(4,1,1);
                 curticks = get(gca, 'XTick');
                 set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
                 plot(iters, dxs(iters), 'o-');
                 title('Evolution of X');
                 axis([iters(1),max(2,iters(end)),0,1.2*max(abs(dxs(iters)))])
-                
+
                 subplot(4,1,2);
                 curticks = get(gca, 'XTick');
                 set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
                 plot(iters, dys(iters), 's-');
                 title('Evolution of Y');
                 axis([iters(1),max(2,iters(end)),0,1.2*max(abs(dys(iters)))])
-                
+
                 subplot(4,1,3);
                 curticks = get(gca, 'XTick');
                 set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
                 plot(iters, rad2deg(dths(iters)),'x-');
                 title('Evolution of Ө');
                 axis([iters(1),max(2,iters(end)),0,1.2*max(abs(rad2deg(dths(iters))))])
-                
+
                 subplot(4,1,4);
                 curticks = get(gca, 'XTick');
                 set( gca, 'XTickLabel', cellstr( num2str(curticks(:), '%5f') ) );
@@ -443,7 +478,7 @@ for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
                 title('Evolution of Err');
                 axis([iters(1),max(2,iters(end)),0,1.2*max(abs(stoperr(iters)))])
     %         case 3  % Hill Climbing
-    % 
+    %
     %             % Occupancy Grid
     %             change_current_figure(3);
     %             cla
@@ -452,15 +487,16 @@ for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
     %             colormap([1 1 1; 0.5 0.5 0.5; 0 0 0]);
         end
     end
-    
-    
+
+
+
     % Select the map for the next scan
     if useScan2World
         map = world;
     else
         map = scan;
     end
-    
+
     % Set next search starting location
     if useScan2World
         if usePrevOffsetAsGuess
@@ -473,26 +509,73 @@ for scanIdx = [1 1]; %start:step:min(stop,size(nScanIndex,1))
             init_guess = T;
         end
     end
-    
-    
+
+
     if plotit
         drawnow
         %pause(.1)
     end
+
+    if verbose
+        fprintf('ScanMatcher: PostMatch took %.4f seconds. \n', toc(ScanPostMatch))
+    end
 end
+
 
 toc(startTime)
 
 
 
 
-% Plot World
-change_current_figure(1);
-cla
-hold on
-plot(world(:,1), world(:,2), 'k.', 'MarkerSize', 1)
-plot(path(:,1), path(:,2), 'r.')
-axis equal
-title(['Scan: ' num2str(scanIdx)]);
-
-
+%  % Plot World
+%  change_current_figure(1);
+%  clf
+%  hold on
+%  plot(world(:,1), world(:,2), 'k.', 'MarkerSize', 1)
+%  plot(path(:,1), path(:,2), 'r.');
+%  axis equal
+%  title(['Scan: ' num2str(scanIdx)]);
+%
+%  %print('../World','-dpng');
+%  hgsave('../World')
+%
+%
+%  % Plot dT
+%  n = 1;
+%  change_current_figure(2);
+%  clf
+%  subplot(3,1,1);
+%  plot(diff(path(:,1),n), 'r.')
+%  title('X: diff(path(:,1),n)')
+%
+%  subplot(3,1,2);
+%  plot(diff(path(:,2),n), 'g.')
+%  title('Y: diff(path(:,2),n)')
+%
+%  subplot(3,1,3);
+%  plot(diff(path(:,3),n), 'b.')
+%  title('Z: diff(path(:,3),n)')
+%  print('../pathDiff1','-dpng');
+%
+%
+%
+%  % Plot dT2
+%  n = 2;
+%  change_current_figure(3);
+%  clf
+%  subplot(3,1,1);
+%  plot(diff(path(:,1),n), 'r.')
+%  title('X: diff(path(:,1),n)')
+%
+%  subplot(3,1,2);
+%  plot(diff(path(:,2),n), 'g.')
+%  title('Y: diff(path(:,2),n)')
+%
+%  subplot(3,1,3);
+%  plot(diff(path(:,3),n), 'b.')
+%  title('Z: diff(path(:,3),n)')
+%  print('../pathDiff2','-dpng');
+%
+%
+%  profile off
+%  profsave;

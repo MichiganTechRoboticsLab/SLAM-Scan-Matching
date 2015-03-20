@@ -4,109 +4,169 @@ function [ T ] = chamferMatch( T, scan, map, varargin)
 
     % Read optional parameters
     p = inputParser;
-    p.addParameter('pixelSize' ,         0.05  , @(x)isnumeric(x));
-    p.addParameter('xRange'    ,         0.4   , @(x)isnumeric(x));
-    p.addParameter('yRange'    ,         0.4   , @(x)isnumeric(x));
-    p.addParameter('thetaRange', deg2rad(12    ), @(x)isnumeric(x));
-    p.addParameter('dTheta'    , deg2rad(1 ), @(x)isnumeric(x));
+    p.addParameter('pixelSize' ,         0.05  , @(x)isnumeric(x)); 
+    p.addParameter('dLinear'   ,         0.4   , @(x)isnumeric(x));  
+    p.addParameter('dTheta'    , deg2rad(1    ), @(x)isnumeric(x));    
+    p.addParameter('iterations',         3     , @(x)isnumeric(x));   
+    p.addParameter('verbose'   , false         , @(x)islogical(x));
     p.parse(varargin{:})
 
     pixelSize   = p.Results.pixelSize;
-    xRange      = p.Results.xRange;
-    yRange      = p.Results.yRange;
-    thetaRange  = p.Results.thetaRange;
+    dLinear     = p.Results.dLinear;
     dTheta      = p.Results.dTheta;
+    iterations  = p.Results.iterations;
+    verbose     = p.Results.verbose;
     
-    verbose = false;
     
     % Generate Occupancy Grid
-    lookupTableTic = tic;
+    if verbose
+        lookupTableTic = tic;
+    end
+    
     ogrid = oGrid(map, [], pixelSize);
     
-    % Generate chamfer distance map
+    if verbose
+        fprintf('Chamfer: oGrid generation took %.4f seconds. \n', toc(lookupTableTic))
+    end
+    
+    
+    % Generate chamfer distance map    
+    if verbose
+        lookupTableTic = tic;
+    end;
+    
     [Dmap, ~] = bwdist(ogrid.grid);
     
     if verbose
-        fprintf('Chamfer: DistMap generation took %.1f seconds. \n', toc(lookupTableTic))
+        fprintf('Chamfer: DistMap generation took %.4f seconds. \n', toc(lookupTableTic))
     end
 
     
-    % Exhaustive Search
-    searchTic = tic;
+    % Exhausitve search
     bestScore = 10e+20;
-    for theta = [(-thetaRange:dTheta:thetaRange)] + T(1,3)
-        
-        % Rotate
-        m = [cos(theta) -sin(theta);
-             sin(theta)  cos(theta)] ;
-        S = (m * scan')';
-        
-        
-        
-        for x = ([-xRange:pixelSize:xRange] + T(1,1));
-            for y = ([-yRange:pixelSize:yRange] + T(1,2))
-                
-                s = S + repmat([x y], size(S,1), 1);
-                
-                % Convert to pixel coords
-                Sx0 = (s(:,1) - ogrid.minX) / (ogrid.maxX - ogrid.minX + ogrid.pixelSize) * size(ogrid.grid, 1);
-                Sy0 = (s(:,2) - ogrid.minY) / (ogrid.maxY - ogrid.minY + ogrid.pixelSize) * size(ogrid.grid, 2);
-        
-                % Translate
-                Sx1 = round(Sx0);  
-                Sy1 = round(Sy0);
-                                
-                % Bounds Checking
-                I = (Sx1 < 1) | ...
-                    (Sy1 < 1) | ...
-                    (Sx1 > size(ogrid.grid, 1)) | ...
-                    (Sy1 > size(ogrid.grid, 2)) ;
-                Sx2 = Sx1(~I);
-                Sy2 = Sy1(~I);
-                
-                % Fitness
-                ind   = sub2ind(size(ogrid.grid), Sx2, Sy2);
-                score = sum(Dmap(ind));
-                
-%                 % Debug Plot
-%                 change_current_figure(4)
-%                 clf;
-%                 imagesc(ogrid.grid);
-%                 axis equal;
-%                 hold on;
-%                 contour(Dmap);
-%                 plot(Sy0, Sx0, 'Or');
-%                 plot(Sy1, Sx1, '+g');
-%                 plot(Sy2, Sx2, '.b');
-%                 title(sprintf('Score = %6d, T = %.4f %.4f %.4f\n', ...
-%                               score, T(end,1), T(end,2), rad2deg(T(end,3) )));
-%                 drawnow;
-%                 pause(0.1)
-                
-                % Keep best score
-                if score < bestScore(end)
-                    T(end+1,:)       = [x y theta];
-                    bestScore(end+1) = score;
+    
+    tmin = 0.1;
+    rmin = deg2rad(1);
+    
+    if dLinear > tmin || dTheta > rmin
+        t = tmin * ceil(dLinear/tmin);
+        r = rmin * ceil(dTheta /rmin);
+    
+        for theta = (-r:rmin:r) + T(1,3)
+
+            % Rotate scan
+            m = [cos(theta) -sin(theta);
+                 sin(theta)  cos(theta)] ;
+            S = (m * scan')';
+
+
+            for x = (-t:tmin:t) + T(1,1);
+                for y = (-t:tmin:t) + T(1,2)
+
+                    % Translate scan
+                    s = S + repmat([x y], size(S,1), 1);
+
+                    % Convert to pixel coords
+                    Sx0 = (s(:,1) - ogrid.minX) / (ogrid.maxX - ogrid.minX + ogrid.pixelSize) * size(ogrid.grid, 1);
+                    Sy0 = (s(:,2) - ogrid.minY) / (ogrid.maxY - ogrid.minY + ogrid.pixelSize) * size(ogrid.grid, 2);
+
+                    Sx1 = round(Sx0);  
+                    Sy1 = round(Sy0);
+
+                    % Bounds Checking
+                    I = (Sx1 < 1) | ...
+                        (Sy1 < 1) | ...
+                        (Sx1 > size(ogrid.grid, 1)) | ...
+                        (Sy1 > size(ogrid.grid, 2)) ;
+                    Sx2 = Sx1(~I);
+                    Sy2 = Sy1(~I);
+
+                    % Fitness
+                    %ind   = sub2ind(size(ogrid.grid), Sx2, Sy2);
                     
-%                     fprintf('Score = %6d, T = %.4f %.4f %.4f\n', ...
-%                              score, T(end,1), T(end,2), rad2deg(T(end,3) ));
-        
-                end
-           end 
+                    siz = size(ogrid.grid);
+                    ind = Sx2 + (Sy2 - 1).*siz(1);
+                    
+                    score = sum(Dmap(ind));
+
+
+                    % Keep best score
+                    if score < bestScore(end)
+                        Tbest     = [x y theta];
+                        bestScore = score;                            
+                    end
+               end 
+            end
         end
     end
     
     
+    
+    % Hi-Lo Search
     if verbose
-        fprintf('Chamfer: Search took %.1f seconds. \n', toc(searchTic))
+        searchTic = tic;
+    end
+    t = min(tmin, dLinear);
+    r = min(rmin, dTheta);
+        
+    for i = 1:iterations
+
+        for theta = ([-r 0 r]) + T(1,3)
+
+            % Rotate scan
+            m = [cos(theta) -sin(theta);
+                 sin(theta)  cos(theta)] ;
+            S = (m * scan')';
+
+
+            for x = ([-t 0 t]) + T(1,1);
+                for y = ([-t 0 t]) + T(1,2)
+
+                    % Translate scan
+                    s = S + repmat([x y], size(S,1), 1);
+
+                    % Convert to pixel coords
+                    Sx0 = (s(:,1) - ogrid.minX) / (ogrid.maxX - ogrid.minX + ogrid.pixelSize) * size(ogrid.grid, 1);
+                    Sy0 = (s(:,2) - ogrid.minY) / (ogrid.maxY - ogrid.minY + ogrid.pixelSize) * size(ogrid.grid, 2);
+
+                    Sx1 = round(Sx0);  
+                    Sy1 = round(Sy0);
+
+                    % Bounds Checking
+                    I = (Sx1 < 1) | ...
+                        (Sy1 < 1) | ...
+                        (Sx1 > size(ogrid.grid, 1)) | ...
+                        (Sy1 > size(ogrid.grid, 2)) ;
+                    Sx2 = Sx1(~I);
+                    Sy2 = Sy1(~I);
+
+                    % Fitness
+                    %ind   = sub2ind(size(ogrid.grid), Sx2, Sy2);
+                    
+                    siz = size(ogrid.grid);
+                    ind = Sx2 + (Sy2 - 1).*siz(1);
+                    
+                    score = sum(Dmap(ind));
+
+
+                    % Keep best score
+                    if score < bestScore(end)
+                        Tbest     = [x y theta];
+                        bestScore = score;                            
+                    end
+               end 
+            end
+        end
+        
+        % Init Next Itteration
+        r = r/2;
+        t = t/2;
+        T = Tbest;
     end
     
-%     % Debug plot of D & I maps
-%     plotItteration( 5, ogrid, map, scan, T(end,:), bestScore )   
-%     change_current_figure(5)
-%     contour(Dmap);
-        
-    % Only return the final result
-    T = T(end,:);
+    
+    if verbose
+        fprintf('Chamfer: Search took %.4f seconds. \n', toc(searchTic))
+    end
 end
 

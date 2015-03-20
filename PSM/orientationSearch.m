@@ -5,6 +5,7 @@ function dth = orientationSearch(ref, newR, newBad, C)
     global PM_L_POINTS
     global PM_MAX_RANGE;
     global PM_DFI
+    global VERBOSE
     %%
     LARGE_NUMBER = PM_MAX_RANGE + 10;
     n = 0;
@@ -36,30 +37,32 @@ function dth = orientationSearch(ref, newR, newBad, C)
             err(k) = LARGE_NUMBER;
         end
         
-        change_current_figure(7);
-        cla
-        hold on
-        plot(nI,newR(nI),'r.');
-        plot(nI,ref.data(rI,2),'g.');
-        title(['dI: ' num2str(di) ' Angle: ' num2str(rad2deg(di*PM_DFI))]);
-        hold off
-        
-        change_current_figure(6);
-        cla
-        plot(rad2deg(beta(1:k)*PM_DFI),err(1:k),'.r-')
-        drawnow;
+        if VERBOSE
+            change_current_figure(7);
+            cla
+            hold on
+            plot(nI,newR(nI),'r.');
+            plot(nI,ref.data(rI,2),'g.');
+            title(['dI: ' num2str(di) ' Angle: ' num2str(rad2deg(di*PM_DFI))]);
+            hold off
+            
+            change_current_figure(6);
+            cla
+            plot(rad2deg(beta(1:k)*PM_DFI),err(1:k),'.r-')
+            drawnow;
+        end
         k = k + 1;
     end
     
     [~, imin] = min(err);
-    imin = imin;
-    global figs
-    change_current_figure(6);
-    cla
-    hold on
-    plot(rad2deg(beta*PM_DFI),err,'.r-')
-    dth = ((beta(imin)))*PM_DFI;
     
+    if VERBOSE
+        change_current_figure(6);
+        cla
+        hold on
+        plot(rad2deg(beta*PM_DFI),err,'.r-')
+    end
+    dth = ((beta(imin)))*PM_DFI;
     
     m = 0;
     if(imin >= 2 && imin < (k-1))
@@ -69,15 +72,20 @@ function dth = orientationSearch(ref, newR, newBad, C)
         newxs = min(xs):.1:max(xs);
         newbetas = beta(min(xs+imin)):.1:beta(max(xs+imin));
         newerr = polyval(C,newxs);
-        plot(rad2deg(newbetas*PM_DFI),newerr,'g-');
-        plot(rad2deg(dth+m*PM_DFI),polyval(C,m),'g.');
+        if VERBOSE
+            plot(rad2deg(newbetas*PM_DFI),newerr,'g-');
+            plot(rad2deg(dth+m*PM_DFI),polyval(C,m),'g.');
+        end
         m = roots(polyder(C));
         if( polyval(C,m) > err(imin))
             m = 0;
         end
     end
     
-    hold off
+    if VERBOSE
+        hold off
+    end
+    
     dth = dth+m*PM_DFI;
     %     if(imin >= 2 && imin < (k))
     %         D = err(imin -1) + err(imin+1) -2 * err(imin);
