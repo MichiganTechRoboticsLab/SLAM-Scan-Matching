@@ -17,18 +17,20 @@ ConnectDist = 0.1;
 plotit = false;
 verbose = false;
 
-MaxAccelLin = 0.4;
-MaxAccelRot = deg2rad(8);
+borderSize = 2; % (Meters)
 
-RotResolution = deg2rad(.25);
-LinResolution = 0.02;
+MaxAccelLin = 0.5;
+MaxAccelRot = deg2rad(15);
+
+RotResolution = deg2rad(.1);
+LinResolution = 0.005;
 
 
 
 % Algorithm Specific
 switch algo
     case 2
-        connectTheDots = false; % doesn't work with algo 2
+        connectTheDots = false; % doesn't work with PSM
 end
 
 
@@ -137,7 +139,6 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         scanWorldFrame = scanWorldFrame(:,[1,2]);
         
         % extract points around the current scan for a reference map
-        borderSize = 1; % (Meters)
         map = map(map(:,1) > min(scanWorldFrame(:,1)) - borderSize, :);
         map = map(map(:,1) < max(scanWorldFrame(:,1)) + borderSize, :);
         map = map(map(:,2) > min(scanWorldFrame(:,2)) - borderSize, :);
@@ -294,7 +295,7 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
                     'dTheta'    , rmax,               ...
                     'dLinear'   , tmax,               ...
                     'iterations', iterations,      ...
-                    'pixelSize' , LinResolution, ...
+                    'pixelSize' , max(LinResolution,0.03), ...
                     'verbose'   , verbose );
                 
 %                r = r/2;
@@ -561,7 +562,7 @@ plot(diff(path(:,2),n), 'g.')
 title('Y: diff(path(:,2),n)')
 
 subplot(3,1,3);
-plot(diff(path(:,3),n), 'b.')
+plot(rad2deg(diff(path(:,3),n)), 'b.')
 title('Z: diff(path(:,3),n)')
 print('../pathDiff1','-dpng');
 
@@ -580,7 +581,7 @@ plot(diff(path(:,2),n), 'g.')
 title('Y: diff(path(:,2),n)')
 
 subplot(3,1,3);
-plot(diff(path(:,3),n), 'b.')
+plot(rad2deg(diff(path(:,3),n)), 'b.')
 title('Z: diff(path(:,3),n)')
 print('../pathDiff2','-dpng');
 

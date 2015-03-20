@@ -45,8 +45,8 @@ function [ T ] = chamferMatch( T, scan, map, varargin)
     % Exhausitve search
     bestScore = 10e+20;
     
-    tmin = 0.1;
-    rmin = deg2rad(1);
+    tmin = 0.03;
+    rmin = deg2rad(2);
     
     if dLinear > tmin || dTheta > rmin
         t = tmin * ceil(dLinear/tmin);
