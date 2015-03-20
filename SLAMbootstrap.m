@@ -4,7 +4,7 @@ profile on
 
 % Scan ROI Settings
 start         = 1;
-step          = 10; % Scans
+step          = 5; % Scans
 numberOfScans = 100000;
 skip          = 1; % Points
 
@@ -17,9 +17,12 @@ ConnectDist = 0.1;
 plotit = false;
 verbose = false;
 
-% Chamfer-SLAM
-rmin = deg2rad(.25);
-tmin = 0.03;
+MaxAccelLin = 0.4;
+MaxAccelRot = deg2rad(8);
+
+RotResolution = deg2rad(.25);
+LinResolution = 0.02;
+
 
 
 % Algorithm Specific
@@ -31,14 +34,27 @@ end
 
 % Initialize State Variables
 nScanIndex = unique(Lidar_ScanIndex);
-stop = start + step * numberOfScans;
+stop       = start + step * numberOfScans;
 
-map = [];
-pose = [0 0 0];
-path = [0 0 0];
-world = [];
-T = [0 0 0];
+map        = [];
+pose       = [0 0 0];
+path       = [0 0 0];
+world      = [];
+T          = [0 0 0];
 init_guess = [0 0 0];
+
+
+if usePrevOffsetAsGuess
+    rmax = max(MaxAccelRot*(step/40), RotResolution);
+    tmax = max(MaxAccelLin*(step/40), LinResolution);
+else
+    % fix me later....   
+end
+
+
+% Chamfer Distance
+iterations = ceil(max(log(rmax/RotResolution)/log(2), log(tmax/LinResolution)/log(2)));
+iterations = max(iterations, 1);
 
 
 % Clear all figures before running
@@ -127,9 +143,13 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         map = map(map(:,2) > min(scanWorldFrame(:,2)) - borderSize, :);
         map = map(map(:,2) < max(scanWorldFrame(:,2)) + borderSize, :);
         
-        % Limit number of points in the map
-        %I = randsample(size(map,1), min(size(map,1), 8000));
-        %map = map(I,:);
+%         % Limit number of points in the map
+%         MaxMapSize = 10000;
+%         if size(map,1) > MaxMapSize           
+%             I = randsample(size(map,1), MaxMapSize);
+%             %I = (size(map,1)-MaxMapSize):size(map,1);
+%             map = map(I,:);
+%         end
     end
     
     if connectTheDots
@@ -232,11 +252,11 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
                    0          0         1    ];
             
             % Often seg faults.....
-            t = icpMex(map', scan', ti, 0.2, 'point_to_point');
+            tmax = icpMex(map', scan', ti, 0.2, 'point_to_point');
             
-            T(1) = t(1,3);
-            T(2) = t(2,3);
-            T(3) = atan2(t(2,1), t(1,1));
+            T(1) = tmax(1,3);
+            T(2) = tmax(2,3);
+            T(3) = atan2(tmax(2,1), tmax(1,1));
             
         
         case 5 % ICP1
@@ -265,26 +285,21 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         case 6
             
             
-            % This is equivilant to a hi-lo search
-            r = max(deg2rad(4)*(step/20), rmin);
-            t = max(0.2       *(step/20), tmin);
-            %r = rmin;
-            %t = tmin;
-            
-            while t >= tmin || r >= rmin          
+%             %r = rmin;
+%             %t = tmin;
+%             
+%             while t >= tmin || r >= rmin          
             %for i = 1:3    
-                T = chamferMatch(T, scan, map, ...
-                    'thetaRange', r,           ...
-                    'dTheta', r,               ...
-                                               ...
-                    'xRange', t,               ...
-                    'yRange', t,               ...
-                    'pixelSize', t,            ...
-                    'verbose', verbose );
+                T = chamferMatch(T, scan, map,     ...
+                    'dTheta'    , rmax,               ...
+                    'dLinear'   , tmax,               ...
+                    'iterations', iterations,      ...
+                    'pixelSize' , LinResolution, ...
+                    'verbose'   , verbose );
                 
-               r = r/2;
-               t = t/2;
-            end
+%                r = r/2;
+%                t = t/2;
+%             end
         
             
     end
@@ -317,24 +332,24 @@ for scanIdx = start:step:min(stop,size(nScanIndex,1))
         % Add previous scan to pose
         pose = pose + [mapT(1:2)', T(3)];
     end
-    if(useSimWorld)
-        fprintf('ScanMatcher: Scan %d pose is ', scanIdx);
-        tmp = pose;
-        tmp(3) = rad2deg(tmp(3));
-        fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
-    
-        goodPose = LidarPose(scanIdx,1:3);
-        tmp = goodPose;
-        tmp(3) = rad2deg(tmp(3));
-        fprintf('ScanMatcher: Scan %d pose should be ', scanIdx);
-        fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
-        poseErr = goodPose - pose;
-        tmp = poseErr;
-        tmp(3) = rad2deg(tmp(3));
-        fprintf('ScanMatcher: Scan %d pose err: ', scanIdx);
-        fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
-        
-    end
+%     if(useSimWorld)
+%         fprintf('ScanMatcher: Scan %d pose is ', scanIdx);
+%         tmp = pose;
+%         tmp(3) = rad2deg(tmp(3));
+%         fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
+%     
+%         goodPose = LidarPose(scanIdx,1:3);
+%         tmp = goodPose;
+%         tmp(3) = rad2deg(tmp(3));
+%         fprintf('ScanMatcher: Scan %d pose should be ', scanIdx);
+%         fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
+%         poseErr = goodPose - pose;
+%         tmp = poseErr;
+%         tmp(3) = rad2deg(tmp(3));
+%         fprintf('ScanMatcher: Scan %d pose err: ', scanIdx);
+%         fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
+%         
+%     end
     path(end+1,:) = pose;
     
     % Make Sure Scan in proper Coordinates
@@ -532,7 +547,6 @@ title(['Scan: ' num2str(scanIdx)]);
 %print('../World','-dpng');
 hgsave('../World')
 
-toc(startTime)
 
 % Plot dT
 n = 1;
@@ -552,7 +566,6 @@ title('Z: diff(path(:,3),n)')
 print('../pathDiff1','-dpng');
 
 
-toc(startTime)
 
 % Plot dT2
 n = 2;
@@ -571,7 +584,6 @@ plot(diff(path(:,3),n), 'b.')
 title('Z: diff(path(:,3),n)')
 print('../pathDiff2','-dpng');
 
-toc(startTime)
 
 profile off
 profsave;

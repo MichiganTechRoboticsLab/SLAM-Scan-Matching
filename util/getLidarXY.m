@@ -1,27 +1,34 @@
 function [pts] = getLidarXY(nScan, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex, varargin)
 
-%nScanIndex = unique(Lidar_ScanIndex);
+p = inputParser;
+p.addParameter('LidarRange', 30, @(x)isnumeric(x));
+p.parse(varargin{:})
+
+LidarRange = p.Results.LidarRange;
 
 
-% p = inputParser;
-% p.addParameter('LidarRange', 30, @(x)isnumeric(x));
-% 
-% p.parse(varargin{:})
-% 
-% LidarRange = p.Results.LidarRange;
+% Retrieve each scan's points (Slow)
+%nIndex = nScanIndex(nScan);
+%I = nIndex == Lidar_ScanIndex;
+%
+%a = Lidar_Angles(I,:)';
+%z = Lidar_Ranges(I,:)';
+
 
 % Retrieve each scan's points
-nIndex = nScanIndex(nScan);
-I = nIndex == Lidar_ScanIndex;
+i = (nScan-1) * 1081 + 1;
+I = i:(i+1080);
+a = Lidar_Angles(I)';
+z = Lidar_Ranges(I)';
 
-a = Lidar_Angles(I,:)';
-z = Lidar_Ranges(I,:)';
 
-% %  Remove out of range measurements
-% I = (z >= LidarRange*0.9);
-% a(I) = [];
-% z(I) = [];
+% Remove out of range measurements
+I = (z < 0.5 | z > LidarRange*0.9);
+a(I) = [];
+z(I) = [];
 
+
+% Convert to cart
 [x,y] = pol2cart(a,z);
 
 pts = [x' y'];
