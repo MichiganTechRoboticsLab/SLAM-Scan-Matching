@@ -15,7 +15,7 @@ function [lookupTable_d, totalRangeX, totalRangeY, minX, minY, maxX, maxY] = gen
 % the problem and itterate over each pixel, summing the probabilities
 % contributed by each point in the map which is parallelizable. The current
 % implementation works by summing each hit which has data dependancies that
-% are not parallelizable. IT is a trade-off, there are fewer itterations
+% are not parallelizable. It is a trade-off, there are fewer itterations
 % required in the current form, but it's not parallizable. If the number of
 % points approaches the number of pixels, it might be faster to switch.
 
@@ -44,28 +44,48 @@ function [lookupTable_d, totalRangeX, totalRangeY, minX, minY, maxX, maxY] = gen
     % Convert map points to pixels
     dataP = ptToPx(data, pixelSize, minX, minY, maxX, maxY);
     
+    
+    
+    % Probability of a hit centered around the detected hit
+    lookupTable_h = zeros(2*windowSize + 1);
+    sqrt2piSig = sqrt(2*pi) * lidarStd;
+    for i = (-windowSize:windowSize)
+        for j = (-windowSize:windowSize)
+
+            % For the center of each pixel in the grid, find the
+            % probability that there was a hit there.
+            dist = sqrt((i)^2 + (j)^2);
+
+            %weight = normpdf(dist * pixelSize, 0, lidarStd);
+            x = dist * pixelSize;
+            sigma = lidarStd;
+            weight = exp(-0.5 * ((x)./sigma).^2) ./ sqrt2piSig;
+
+            % Add the value to the map
+            lookupTable_h(i + windowSize + 1, j + windowSize + 1) = weight;
+        end 
+    end
+     
+    
+    
+    
     % Add a blurred normal distibution to the map at each hit location
     for idx=1:size(dataP,1)
         % Pixel location of the hit
         ctrRow = dataP(idx,1);
         ctrCol = dataP(idx,2);
 
-        % Loop through a square of pixels centered around the hit
-        for i = ctrRow - windowSize : ctrRow + windowSize 
-            for j = ctrCol - windowSize : ctrCol + windowSize 
+        
+        for i = (-windowSize:windowSize)
+            for j = (-windowSize:windowSize)
                 
-                % No bounds checking here! If there is an error here, then
-                % you need to fix the image allocation code above.
+                p = lookupTable_d(i + ctrRow, j + ctrCol);
+                q = lookupTable_h(i + windowSize + 1, j + windowSize + 1);
                 
-                % For the center of each pixel in the grid, find the
-                % probability that there was a hit there.
-                dist = sqrt((i - ctrRow)^2 + (j - ctrCol)^2);
-                weight = normpdf(dist * pixelSize, 0, lidarStd);
-
-                % Add the value to the map, with a limit.
-                lookupTable_d(i, j) = min(lookupTable_d(i,j) + weight, maxPxValue);
-            end 
+                lookupTable_d(i + ctrRow, j + ctrCol) = min(p+q, maxPxValue); 
+            end
         end
+        
     end
     
 end

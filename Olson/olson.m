@@ -1,48 +1,45 @@
-function [ T, mapTable] = olson(guess, scan, map, varargin)
-
+function [ T ] = olson(guess, scan, map, varargin)
 
     p = inputParser;
-    p.addParameter('searchRadius', .3, @(x)isnumeric(x));
-    p.addParameter('lidarStd', .01, @(x)isnumeric(x));
-    p.addParameter('pixelSize', .03, @(x)isnumeric(x));
-    p.addParameter('xRange',  .5, @(x)isnumeric(x));
-    p.addParameter('yRange', .5, @(x)isnumeric(x));
-    p.addParameter('thetaRange', deg2rad(.9), @(x)isnumeric(x));
-    p.addParameter('dTheta',  deg2rad(.25), @(x)isnumeric(x));
+    p.addParameter('searchRadius', 0.3         , @(x)isnumeric(x));
+    p.addParameter('lidarStd'    , 0.01        , @(x)isnumeric(x));
+    p.addParameter('pixelSize'   , 0.03        , @(x)isnumeric(x));
+    p.addParameter('xRange'      , 0.5         , @(x)isnumeric(x));
+    p.addParameter('yRange'      , 0.5         , @(x)isnumeric(x));
+    p.addParameter('thetaRange'  , deg2rad(.9) , @(x)isnumeric(x));
+    p.addParameter('dTheta'      , deg2rad(.25), @(x)isnumeric(x));   
+    p.addParameter('verbose'   , false         , @(x)islogical(x));
     p.parse(varargin{:})
 
-    lidarStd = p.Results.lidarStd;
+    lidarStd     = p.Results.lidarStd;
     searchRadius = p.Results.searchRadius * lidarStd;
-    pixelSize = p.Results.pixelSize;
-    xRange = p.Results.xRange;
-    yRange = p.Results.yRange;
-    thetaRange = p.Results.thetaRange;
-    dTheta = p.Results.dTheta;
+    pixelSize    = p.Results.pixelSize;
+    xRange       = p.Results.xRange;
+    yRange       = p.Results.yRange;
+    thetaRange   = p.Results.thetaRange;
+    dTheta       = p.Results.dTheta;
+    verbose      = p.Results.verbose;
 
-
- 
-    N = size(scan,1);
 
     % Generate lookup table
-    fprintf('OLSON: Building LookupTable... \n')
-    lookupTableTic = tic;
+    if verbose
+        fprintf('OLSON: Building LookupTable... \n')
+        lookupTableTic = tic;
+    end
 
-    [mapTable, mapRangeX, mapRangeY, mapMinX, mapMinY, mapMaxX, mapMaxY] = genLookupTable(map, searchRadius, lidarStd, pixelSize);
+    [mapTable, ~, ~, mapMinX, mapMinY, mapMaxX, mapMaxY] = genLookupTable(map, searchRadius, lidarStd, pixelSize);
 
-    fprintf('OLSON: LookupTable generation took %.1f seconds. \n', toc(lookupTableTic))
-
-
-
-    % Center search around initial guess
-    %fprintf('OLSON: Initial Guess\n')
-    %tmp = guess;
-    %tmp(3) = rad2deg(tmp(3));
-    %fprintf(['\t' repmat('%g\t', 1, size(tmp, 2)) '\n'], tmp')
-
+    if verbose
+        fprintf('OLSON: LookupTable generation took %.1f seconds. \n', toc(lookupTableTic))
+    end
 
     % Exahusive search for best score
-    fprintf('OLSON: Searching for solution... \n')
-    searchTic = tic;
+    if verbose
+        fprintf('OLSON: Searching for solution... \n')
+        searchTic = tic;
+    end
+    
+    N = size(scan,1);
 
     X0 = guess(1);
     Y0 = guess(2);
@@ -52,7 +49,7 @@ function [ T, mapTable] = olson(guess, scan, map, varargin)
     
     % Best fit for each theta
     data = zeros(size(thetas,2), 4);
-    for i = 1:size(thetas,2)
+    parfor i = 1:size(thetas,2)
         maxScore = 0;
         
         % Rotate the current scan to the search location
@@ -80,7 +77,11 @@ function [ T, mapTable] = olson(guess, scan, map, varargin)
                 scanLookup(scanLookup(:,1) <= 0 | scanLookup(:,2) <= 0 | scanLookup(:,1) > size(mapTable,1) | scanLookup(:,2) > size(mapTable,2), :) = []; 
                 
                 % Sum all points from lookup table
-                scanInd = sub2ind(size(mapTable), scanLookup(:,1), scanLookup(:,2));
+                %scanInd = sub2ind(size(mapTable), scanLookup(:,1), scanLookup(:,2));
+                
+                siz = size(mapTable);
+                scanInd = scanLookup(:,1) + (scanLookup(:,2) - 1).*siz(1);
+                
                 prob = sum(mapTable(scanInd));
 
                 % Keep the highest score 
@@ -95,6 +96,9 @@ function [ T, mapTable] = olson(guess, scan, map, varargin)
     [~, i] = max(data(:,1));
     T = data(i,2:4);
 
-    fprintf('OLSON: Search took %.1f seconds. \n', toc(searchTic))
+    
+    if verbose
+        fprintf('OLSON: Search took %.1f seconds. \n', toc(searchTic))
+    end
 
 

@@ -1,4 +1,4 @@
-function [ ogrid ] = oGrid( pts, ~, pixelSize)
+function [ ogrid ] = oGrid( pts, pixelSize)
 %oGrid Generate an occupancy grid from point cloud
 %   Detailed explanation goes here
 

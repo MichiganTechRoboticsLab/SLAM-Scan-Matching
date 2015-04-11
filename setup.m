@@ -30,7 +30,13 @@ addpath( wd, [wd '/GICP'], ...
 %load('testData/testworld.mat')
 
 DataPath = '../datasets/';
-DatasetName = 'hall_and_room_w_vn';
+
+%DatasetName = 'hall_and_room_w_vn';       % 62s EERC 4 skip
+%DatasetName = 'eerc_dillman_dow';         % 82s EERC 4 skip
+DatasetName = 'campus1';                   % 279s EERC 4 skip (bad)
+%DatasetName = 'eerc_dow_dill_inout';      %
+
+
          
 % Load dataset from log files
 VectorNav_Logfile = [DataPath DatasetName '/vn.csv'];
