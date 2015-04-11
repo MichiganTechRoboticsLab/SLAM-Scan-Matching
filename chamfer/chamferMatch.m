@@ -36,7 +36,6 @@ function [ T, bestScore ] = chamferMatch( T, scan, map, varargin)
     end;
     
     %[Dmap, ~] = bwdist(ogrid.grid);
-    %Dmap = -ogrid.grid;
     
     if verbose
         fprintf('Chamfer: DistMap generation took %.4f seconds. \n', toc(lookupTableTic))
@@ -93,6 +92,7 @@ function [ T, bestScore ] = chamferMatch( T, scan, map, varargin)
                         ind = Sx2 + (Sy2 - 1).*siz(1);
 
                         score = sum(ogrid.grid(ind));
+                        %score = sum(Dmap(ind));
 
 
                         % Keep best score
@@ -149,7 +149,9 @@ function [ T, bestScore ] = chamferMatch( T, scan, map, varargin)
                         % Fitness
                         siz = size(ogrid.grid);
                         ind = Sx2 + (Sy2 - 1).*siz(1);                    
+                                                
                         score = sum(ogrid.grid(ind));
+                        %score = sum(Dmap(ind));
 
                         % Keep best score
                         if score > bestScore(end)

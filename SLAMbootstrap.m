@@ -356,17 +356,19 @@ for scanIdx = start:step:stopIdx
     tempL = [tempScan ones(size(tempScan,1),1)] * LTrans';
     
     
+    
     % Add transformed data to world
     if useScan2World
         %dp = abs(LastMapUpdatePose - path(end, :));
         %if (dp(1) > 0.5) || (dp(2) > 0.5) || (dp(3) > deg2rad(10))
         %    LastMapUpdatePose = path(end, :);
-        if score < 1050
+        %if score < 1080
             world = [world; tempL(:,1:2)];
-        end
+        %end
     else
         world = [world; temp(:,1:2)];
     end
+    
     
     
     % Debug Plots
@@ -441,6 +443,8 @@ end
 
 
 toc(startTime)
+realTime = Lidar_Timestamp(end) - Lidar_Timestamp(1);
+fprintf('ScanMatcher: Logfile length %.4f seconds. \n', realTime)
 
 profile off
 %profsave;
@@ -454,7 +458,7 @@ if size(world,1) > MaxMapSize
     %I = (size(map,1)-MaxMapSize):size(map,1);
     map = world(I,:);
 end
-
+ 
 change_current_figure(1);
 clf
 hold on
@@ -463,9 +467,12 @@ plot(path(:,1), path(:,2), 'r.', 'MarkerSize', 2);
 axis equal
 title(['Scan: ' num2str(scanIdx)]);
 
-hgsave('../World')
+hgsave([ '../' DatasetName])
 %saveas(gcf, '../World.png');
-print('../World','-dpng', '-r300');
+%print('../World','-dpng', '-r300');
+
+set(gcf,'PaperUnits','inches','PaperPosition', [0 0 8.5 11]);
+print([ '../' DatasetName],'-dpdf');
 
 % 
 % % Plot dT

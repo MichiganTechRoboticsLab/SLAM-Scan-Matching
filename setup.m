@@ -31,10 +31,10 @@ addpath( wd, [wd '/GICP'], ...
 
 DataPath = '../datasets/';
 
-%DatasetName = 'hall_and_room_w_vn';       % 62s EERC 4 skip
-%DatasetName = 'eerc_dillman_dow';         % 82s EERC 4 skip
-DatasetName = 'campus1';                   % 279s EERC 4 skip (bad)
-%DatasetName = 'eerc_dow_dill_inout';      %
+%DatasetName = 'hall_and_room_w_vn';       
+%DatasetName = 'eerc_dillman_dow';         
+%DatasetName = 'campus1';                   
+DatasetName = 'eerc_dow_dill_inout';      
 
 
          
