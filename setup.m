@@ -34,10 +34,22 @@ DataPath = '../datasets/';
 %DatasetName = 'hall_and_room_w_vn';       
 %DatasetName = 'eerc_dillman_dow';         
 %DatasetName = 'campus1';                   
-DatasetName = 'eerc_dow_dill_inout';      
-
-
+%DatasetName = 'eerc_dow_dill_inout';  
+      
+% DatasetName = '2000-01-31-19-01-35';  % EERC817 Multiple passes
+% DatasetName = '2000-01-31-19-05-32';  % EERC8F
+% DatasetName = '2000-01-31-19-10-14';  % EERC1F (bad)
+% DatasetName = '2000-01-31-19-13-51';  % EERC1F small loop   
+% DatasetName = '2000-01-31-19-15-35';  % EERC1F large loop
+% DatasetName = '2000-01-31-19-21-26';  % EERC_DOW_DIL inout (bad) [1-32000], 
+% DatasetName = '2000-01-31-19-47-37';  %  EERC Outside front no motion
+% DatasetName = '2000-01-31-19-50-23';  %  Campus {1.5, 16k, 24k, 43k, [], 76k, 90k} 
+% DatasetName = '2000-01-31-20-30-59';  % EERC8f elevator to ieee, 817
+%DatasetName = '2000-01-31-20-34-36';  % garbage
          
+% DatasetName = 'EERC8f handheld';  % EERC 8f IEEE, Lap, stairwells. (good)
+DatasetName = 'EERC_DOW_DIL inout3';  %  handheld {1, 3k, 11k, 24k }
+
 % Load dataset from log files
 VectorNav_Logfile = [DataPath DatasetName '/vn.csv'];
 Hokuyo_Logfile = [DataPath DatasetName '/lidar_data.csv'];  

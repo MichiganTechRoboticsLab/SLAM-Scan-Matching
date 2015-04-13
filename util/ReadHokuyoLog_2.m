@@ -39,7 +39,7 @@ else
     Lidar_ScanCount = size(Lidar_Log, 1);
    
     % Save parsed data to speed up load next time
-    save(matfile, 'Lidar_*');
+    save(matfile, 'Lidar_*', '-v7.3');
 end
 
 

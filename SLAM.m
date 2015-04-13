@@ -3,9 +3,9 @@ clc
 profile on
 
 % Scan ROI Settings
-step          = 3;       % Scans
-start         = 1;       % Scan Index
-numberOfScans = 50000;   % Scan Index
+step          = 1;       % Scans
+start         = 24000;       % Scan Index
+numberOfScans = 500000;   % Scan Index
 skip          = 1;       % Points
 
 
@@ -13,23 +13,23 @@ skip          = 1;       % Points
 verbose              = false;
 debugplots           = true;
 
-usePrevOffsetAsGuess = true;
+usePrevOffsetAsGuess = false;
 useScan2World        = true;
 
 connectTheDots       = false;
-ConnectDist          = 0.1;         % (Meters)
+ConnectDist          = 0.1;          % (Meters)
 
-SensorHz             = 40;          % (Hz)
-MaxVelocityLin       = 1;           % (Meters  / second   )
-MaxVelocityRot       = deg2rad(45); % (Radians / second   )
-MaxAccelLin          = 0.5;         % (Meters  / second^2 )
-MaxAccelRot          = deg2rad(15); % (Radians / second^2 )
+SensorHz             = 40;           % (Hz)
+MaxVelocityLin       = 3;            % (Meters  / second   )
+MaxVelocityRot       = deg2rad(90);  % (Radians / second   )
+MaxAccelLin          = 0.5;            % (Meters  / second^2 )
+MaxAccelRot          = deg2rad(60);  % (Radians / second^2 )
 
-MapBorderSize        = 1;           % (Meters)
-MapPixelSize         = 0.03;        % (Meters)
+MapBorderSize        = 1;            % (Meters)
+MapPixelSize         = 0.05;         % (Meters)
 
-SearchResolutionRot  = deg2rad(.25); % (Radians)
-SearchResolutionLin  = 0.05;        % (Meters)
+SearchResolutionLin  = 0.05;         % (Meters)
+SearchResolutionRot  = deg2rad(1); % (Radians)
 
 
 
@@ -54,9 +54,11 @@ LastMapUpdatePose = [0 0 0];
 
 
 
-
 % Clear all figures before running
-clearallplots( 1 );
+for i = 1:3
+    clearallplots( i );
+end
+
 
 
 % Scan Matching Loop
@@ -76,12 +78,23 @@ for scanIdx = start:step:stopIdx
         case 2
             scan = getLidarPolar(scanIdx, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex);
         otherwise
-            scan = getLidarXY(scanIdx, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex);
+            scan = getLidarXY(scanIdx, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex, ...
+                              'LidarRange', 30);
     end
     
     % Timestamp (missing data compensation)
     stamp = Lidar_Timestamp_Sensor(scanIdx);
        
+    
+    % Get the orientation from the IMU for each hit
+    %Fusion_Q = interp1(IMU_Timestamp, IMU_Q, stamp);
+
+    % Rotate all points by their orientation
+    %Fusion_scan = quatrotate(Fusion_Q, [scan, zeros(size(scan,1),1)]);
+    
+    % Remove points that are probably on the ground or ceiling
+    %I = abs(Fusion_scan(:,3)) < 0.2;
+    %scan = scan(I, [1,2]);
     
     % Init World
     if isempty(map)
@@ -110,20 +123,14 @@ for scanIdx = start:step:stopIdx
         continue
     end
     
-    % Only update map when pose has changed
-    if length(path) > 10
-      updatemap = sum(path(end-1,:) ~= path(end,:));
-    else
-      updatemap = true;
-    end
     
     % Generate a local map from the world map
-    if useScan2World && updatemap
+    if useScan2World
         
         % Translate current scan to map coordinates
-        dx    = pose(1);
-        dy    = pose(2);
-        theta = pose(3);
+        dx    = init_guess(1);
+        dy    = init_guess(2);
+        theta = init_guess(3);
         
         M = [ cos(theta) -sin(theta) dx ;
               sin(theta)  cos(theta) dy ;
@@ -164,12 +171,7 @@ for scanIdx = start:step:stopIdx
         tmax = max(MaxVelocityLin*(stamp - prev_stamp), SearchResolutionLin);
     end
 
-    % Search Iterations (ChamferSLAM)
-    % Finds the number of searach iterations required to meet the accuracy goal
-    iterations = ceil(max(log(rmax/SearchResolutionRot)/log(2),  ...
-                          log(tmax/SearchResolutionLin)/log(2) ));
-    iterations = max(iterations, 1);
-    
+  
     
     % Initial Guess
     T = init_guess;
@@ -266,14 +268,16 @@ for scanIdx = start:step:stopIdx
        
             
         case 6 % ChamferSLAM
-
-            [T, score] = chamferMatch(T, scan, map,               ...
+ 
+            [T, hits] = chamferMatch(T, scan, map,               ...
                                       'dTheta'    , rmax,         ...
                                       'dLinear'   , tmax,         ...
-                                      'iterations', iterations,   ...
                                       'pixelSize' , MapPixelSize, ...
+                                      'SearchRot' , SearchResolutionRot, ...
+                                      'SearchLin' , SearchResolutionLin, ...
                                       'verbose'   , verbose );
-            
+            score  = sum(hits);
+             
     end
     
     if verbose
@@ -359,12 +363,31 @@ for scanIdx = start:step:stopIdx
     
     % Add transformed data to world
     if useScan2World
-        %dp = abs(LastMapUpdatePose - path(end, :));
-        %if (dp(1) > 0.5) || (dp(2) > 0.5) || (dp(3) > deg2rad(10))
-        %    LastMapUpdatePose = path(end, :);
-        %if score < 1080
-            world = [world; tempL(:,1:2)];
-        %end
+        
+        %world = [world; tempL(:,1:2)];
+        
+        % Update map after distance traveled. 
+        dp = abs(LastMapUpdatePose - path(end, :));
+        if (dp(1) > 0.2) || (dp(2) > 0.2) || (dp(3) > deg2rad(5))
+           LastMapUpdatePose = path(end, :);
+           
+           
+            % Only add new points to the map 
+            newpts = tempL(~logical(hits), 1:2);
+            world = [world; newpts];
+           
+        end
+        
+        % Update when new hits are detected
+%         if score < 1070
+%            world = [world; tempL(:,1:2)];
+%         end
+        
+%         if mod(length(path), 4) == 0 || length(path) < 40           
+%             world = [world; tempL(:,1:2)];
+%         end
+    
+        
     else
         world = [world; temp(:,1:2)];
     end
@@ -372,7 +395,7 @@ for scanIdx = start:step:stopIdx
     
     
     % Debug Plots
-    if debugplots && mod(length(path), 200) == 0 
+    if debugplots  && mod(length(path), 40) == 0 
         % Plot World
         change_current_figure(1);
         cla
@@ -414,6 +437,23 @@ for scanIdx = start:step:stopIdx
     % Select the map for the next scan
     if useScan2World
         map = world;
+        
+        %MaxMapSize = 100000;
+        %sz = size(world, 1);
+        %if sz > MaxMapSize            
+        %    I = randsample(size(world,1), MaxMapSize);
+        %    map = world(I, :);
+        %else
+        %    map = world;
+        %end
+        
+        %map = [map; tempL(:,1:2)];
+%         
+%         if mod(length(path), 40) == 0
+%             map = world;
+%         else
+%             map = [map; tempL(:,1:2)];
+%         end
     else
         map = scan;
     end
@@ -429,7 +469,7 @@ for scanIdx = start:step:stopIdx
         if usePrevOffsetAsGuess
             init_guess = T;
         end
-    end
+    end 
     
     % Timestamp 
     prev_stamp = stamp;
@@ -443,10 +483,11 @@ end
 
 
 toc(startTime)
-realTime = Lidar_Timestamp(end) - Lidar_Timestamp(1);
+realTime = Lidar_Timestamp(scanIdx) - Lidar_Timestamp(start);
 fprintf('ScanMatcher: Logfile length %.4f seconds. \n', realTime)
 
 profile off
+%profile viewer
 %profsave;
 
 % Plot World
@@ -474,41 +515,80 @@ hgsave([ '../' DatasetName])
 set(gcf,'PaperUnits','inches','PaperPosition', [0 0 8.5 11]);
 print([ '../' DatasetName],'-dpdf');
 
-% 
-% % Plot dT
-% n = 1;
-% change_current_figure(2);
-% clf
-% subplot(3,1,1);
-% plot(diff(path(:,1),n), 'r.')
-% title('X: diff(path(:,1),n)')
-% 
-% subplot(3,1,2);
-% plot(diff(path(:,2),n), 'g.')
-% title('Y: diff(path(:,2),n)')
-% 
-% subplot(3,1,3);
-% plot(rad2deg(diff(path(:,3),n)), 'b.')
-% title('Z: diff(path(:,3),n)')
-% print('../pathDiff1','-dpng');
+
+% Plot dT
+fl = 5;
+n = 1;
+change_current_figure(2);
+clf
+subplot(3,1,1);
+plot(diff(path(:,1),n), 'r.')
+hold on
+plot( tmax * ones(size(path(:,1))), 'b-')
+plot(-tmax * ones(size(path(:,1))), 'b-')
+title(['X: diff(path(:,1),' num2str(n) ')'])
+tmp  = diff(path(:,1),n);
+tmp2 = conv(tmp, ones(fl,1) / fl);
+plot(tmp2, '-b')
+
+subplot(3,1,2);
+plot(diff(path(:,2),n), 'g.')
+hold on
+plot( tmax * ones(size(path(:,1))), 'b-')
+plot(-tmax * ones(size(path(:,1))), 'b-')
+title(['Y: diff(path(:,2),' num2str(n) ')'])
+tmp  = diff(path(:,2),n);
+tmp2 = conv(tmp, ones(fl,1) / fl);
+plot(tmp2, '-b')
+
+subplot(3,1,3);
+plot(rad2deg(diff(path(:,3),n)), 'b.')
+hold on
+plot( rad2deg(rmax) * ones(size(path(:,1))), 'b-')
+plot(-rad2deg(rmax) * ones(size(path(:,1))), 'b-')
+title(['Z: diff(path(:,3),' num2str(n) ')'])
+tmp  = rad2deg(diff(path(:,3),n));
+tmp2 = conv(tmp, ones(fl,1) / fl);
+plot(tmp2, '-r')
+
+print('../pathDiff1','-dpng');
 
 
 
-% % Plot dT2
-% n = 2;
-% change_current_figure(3);
-% clf
-% subplot(3,1,1);
-% plot(diff(path(:,1),n), 'r.')
-% title('X: diff(path(:,1),n)')
-% 
-% subplot(3,1,2);
-% plot(diff(path(:,2),n), 'g.')
-% title('Y: diff(path(:,2),n)')
-% 
-% subplot(3,1,3);
-% plot(rad2deg(diff(path(:,3),n)), 'b.')
-% title('Z: diff(path(:,3),n)')
-% print('../pathDiff2','-dpng');
+% Plot dT2
+n = 2;
+change_current_figure(3);
+clf
+subplot(3,1,1);
+plot(diff(path(:,1),n), 'r.')
+hold on
+plot( tmax * ones(size(path(:,1))), 'b-')
+plot(-tmax * ones(size(path(:,1))), 'b-')
+title(['X: diff(path(:,1),' num2str(n) ')'])
+tmp  = diff(path(:,1),n);
+tmp2 = conv(tmp, ones(fl,1) / fl);
+plot(tmp2, '-b')
+
+subplot(3,1,2);
+plot(diff(path(:,2),n), 'g.')
+hold on
+plot( tmax * ones(size(path(:,1))), 'b-')
+plot(-tmax * ones(size(path(:,1))), 'b-')
+title(['Y: diff(path(:,2),' num2str(n) ')'])
+tmp  = diff(path(:,2),n);
+tmp2 = conv(tmp, ones(fl,1) / fl);
+plot(tmp2, '-b')
+
+subplot(3,1,3);
+plot(rad2deg(diff(path(:,3),n)), 'b.')
+hold on
+plot( rad2deg(rmax) * ones(size(path(:,1))), 'b-')
+plot(-rad2deg(rmax) * ones(size(path(:,1))), 'b-')
+title(['Z: diff(path(:,3),' num2str(n) ')'])
+tmp  = rad2deg(diff(path(:,3),n));
+tmp2 = conv(tmp, ones(fl,1) / fl);
+plot(tmp2, '-r')
+
+print('../pathDiff2','-dpng');
 
 
