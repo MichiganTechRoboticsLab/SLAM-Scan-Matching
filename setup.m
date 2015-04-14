@@ -11,7 +11,7 @@
 
 algo = 6;
 
-
+ 
 % Set up paths
 wd = pwd;
 addpath( wd, [wd '/GICP'], ...
