@@ -1,6 +1,8 @@
 function mattest( jobID, taskID )
-%MATTEST tst harness for superior/ivs clusters
-%   Detailed explanation goes here
+%MATTEST test harness for cluster execution
+%   This script is called by each node in the cluster
+%   Based on the taskID, each node is assigned a dataset.
+%   Results are saved to unique files for each dataset
 
 
     % Select a scan matching algorithm:
@@ -28,7 +30,6 @@ function mattest( jobID, taskID )
                  [wd '/util']);
 
     % Load sensor dataset
-    %load('../datasets/hallroomvn.mat')
     %load('testData/testWorldPSM.mat')
     %load('testData/testworld.mat')
 
@@ -56,7 +57,8 @@ function mattest( jobID, taskID )
     % Simulated data for PSM
     useSimWorld = false;
 
-    SLAMbootstrap
+    SLAM
 
+    save([ '../' DatasetName '.mat']);
 end
 

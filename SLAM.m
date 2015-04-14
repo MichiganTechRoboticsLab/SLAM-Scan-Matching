@@ -4,8 +4,8 @@ profile on
 
 % Scan ROI Settings
 step          = 1;       % Scans
-start         = 24000;       % Scan Index
-numberOfScans = 500000;   % Scan Index
+start         = 25010;   % Scan Index
+numberOfScans = 500000;  % Scan Index
 skip          = 1;       % Points
 
 
@@ -17,19 +17,18 @@ usePrevOffsetAsGuess = false;
 useScan2World        = true;
 
 connectTheDots       = false;
-ConnectDist          = 0.1;          % (Meters)
+ConnectDist          = 0.1;          % (Meters )
 
-SensorHz             = 40;           % (Hz)
 MaxVelocityLin       = 3;            % (Meters  / second   )
 MaxVelocityRot       = deg2rad(90);  % (Radians / second   )
-MaxAccelLin          = 0.5;            % (Meters  / second^2 )
+MaxAccelLin          = 0.5;          % (Meters  / second^2 )
 MaxAccelRot          = deg2rad(60);  % (Radians / second^2 )
 
-MapBorderSize        = 1;            % (Meters)
-MapPixelSize         = 0.05;         % (Meters)
+MapBorderSize        = 1;            % (Meters )
+MapPixelSize         = 0.05;         % (Meters )
 
-SearchResolutionLin  = 0.05;         % (Meters)
-SearchResolutionRot  = deg2rad(1); % (Radians)
+SearchResolutionLin  = 0.05;         % (Meters )
+SearchResolutionRot  = deg2rad(0.5); % (Radians )
 
 
 
@@ -78,8 +77,8 @@ for scanIdx = start:step:stopIdx
         case 2
             scan = getLidarPolar(scanIdx, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex);
         otherwise
-            scan = getLidarXY(scanIdx, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex, ...
-                              'LidarRange', 30);
+            [scan, pol] = getLidarXY(scanIdx, nScanIndex, Lidar_Angles, Lidar_Ranges, Lidar_ScanIndex, ...
+                                     'LidarRange', 30);
     end
     
     % Timestamp (missing data compensation)
@@ -100,7 +99,7 @@ for scanIdx = start:step:stopIdx
     if isempty(map)
         % Init map and world
         path = pose;
-        map = scan;
+        map  = scan;
         
         tempMap = [];
         switch algo
@@ -146,13 +145,6 @@ for scanIdx = start:step:stopIdx
         map = map(map(:,2) > min(scanWorldFrame(:,2)) - MapBorderSize, :);
         map = map(map(:,2) < max(scanWorldFrame(:,2)) + MapBorderSize, :);
         
-%         % Limit number of points in the map
-%         MaxMapSize = 10000;
-%         if size(map,1) > MaxMapSize           
-%             I = randsample(size(map,1), MaxMapSize);
-%             %I = (size(map,1)-MaxMapSize):size(map,1);
-%             map = map(I,:);
-%         end
     end
     
     
@@ -370,12 +362,16 @@ for scanIdx = start:step:stopIdx
         dp = abs(LastMapUpdatePose - path(end, :));
         if (dp(1) > 0.2) || (dp(2) > 0.2) || (dp(3) > deg2rad(5))
            LastMapUpdatePose = path(end, :);
-           
-           
+                
             % Only add new points to the map 
-            newpts = tempL(~logical(hits), 1:2);
+            I = ~logical(hits);
+            
+            % Only add points close to the sensor
+            I = I & (pol(:,2) < 5); %cos(deg2rad(0.25)) * 5m = 0.04m error (1 px)
+            
+            % Add points to the map
+            newpts = tempL(I, 1:2);
             world = [world; newpts];
-           
         end
         
         % Update when new hits are detected
@@ -395,18 +391,33 @@ for scanIdx = start:step:stopIdx
     
     
     % Debug Plots
-    if debugplots  && mod(length(path), 40) == 0 
+    if debugplots  && mod(length(path), 400) == 0 
+  
+        % Limit number of points in the map
+        MaxMapSize = 100000;
+        if size(world,1) > MaxMapSize           
+            I = randsample(size(world,1), MaxMapSize);
+            %I = (size(map,1)-MaxMapSize):size(map,1);
+            tmpW = world(I,:);
+        else
+            tmpW = world;
+        end
+        
         % Plot World
         change_current_figure(1);
-        cla
+        clf
+        plot(tmpW(:,1), tmpW(:,2), 'k.', 'MarkerSize', 1)
         hold on
-        plot(world(:,1), world(:,2), 'k.', 'MarkerSize', 1)
         plot(path(:,1), path(:,2), 'r.')
         axis equal
         title(['Scan: ' num2str(scanIdx)]);
         drawnow
   
+        %set(gcf,'PaperUnits','inches','PaperPosition', [0 0 8.5 11]);
+        print([ '../' DatasetName '-dbg'],'-dpdf');
     
+        tmpW = [];
+        
 %         % Plot Transformed and Map and Scans
 %         tempMap = [];
 %         switch algo
@@ -483,7 +494,7 @@ end
 
 
 toc(startTime)
-realTime = Lidar_Timestamp(scanIdx) - Lidar_Timestamp(start);
+realTime = Lidar_Timestamp_Sensor(scanIdx) - Lidar_Timestamp_Sensor(start);
 fprintf('ScanMatcher: Logfile length %.4f seconds. \n', realTime)
 
 profile off

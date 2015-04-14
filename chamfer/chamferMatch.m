@@ -8,8 +8,8 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
     p.addParameter('dLinear'   ,         0.4   , @(x)isnumeric(x));  
     p.addParameter('dTheta'    , deg2rad(1    ), @(x)isnumeric(x));    
     p.addParameter('SearchRot' , deg2rad(.25  ), @(x)isnumeric(x));    
-    p.addParameter('SearchLin',          0.5   , @(x)isnumeric(x));   
-    p.addParameter('verbose'   , false         , @(x)islogical(x));
+    p.addParameter('SearchLin' ,         0.5   , @(x)isnumeric(x));   
+    p.addParameter('verbose'   ,         false , @(x)islogical(x));
     p.parse(varargin{:})
 
     pixelSize   = p.Results.pixelSize;
@@ -75,10 +75,7 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
             for x = (-t:SearchLin:t) + T(1,1);
                 for y = (-t:SearchLin:t) + T(1,2)
 
-                    % Translate scan
-                    %s = S + repmat([x y], size(S,1), 1);
-
-                    % Convert to pixel coords
+                    % Translate points and convert to pixel coords
                     Sx0 = (S(:,1) + (x - ogrid.minX)) / tmpX ;
                     Sy0 = (S(:,2) + (y - ogrid.minY)) / tmpY ;
 
@@ -101,7 +98,7 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
 
 
                     if UseChamfer
-                        hits = (Dmap(ind) <= 1) & (Dmap(ind) > 10);
+                        hits = (Dmap(ind) <= 1); % & (Dmap(ind) > 10);
                         score = sum(Dmap(ind));
                     else
                         hits = ogrid.grid(ind);
@@ -122,17 +119,16 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
                             bestHits  = hits;                          
                         end
                     end
-               end 
+                end 
             end
-          
         end
         T = Tbest;
     else
     
     % Hi-Lo Search
 
-    %    t = min(tmin, dLinear);
-    %    r = min(rmin, dTheta);
+    %    t = SearchLin;
+    %    r = SearchRot;
 
         t = dLinear;
         r = dTheta;
