@@ -30,7 +30,8 @@ function mattest( jobID, taskID )
                  [wd '/util']);
 
     % Output Path
-    OutPath = ['../jobID/'];
+    OutPath = ['../' num2str(jobID) '/'];
+    mkdir(OutPath);
 
     % Load sensor dataset
     %load('testData/testWorldPSM.mat')
