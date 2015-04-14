@@ -43,7 +43,29 @@ function mattest( jobID, taskID )
         case 3
             DatasetName = 'campus1';  
         case 4
-            DatasetName = 'eerc_dow_dill_inout';      
+            DatasetName = 'eerc_dow_dill_inout';  % Bad timestamp early in dataset {20}
+        case 5
+            DatasetName = '2000-01-31-19-01-35';  % EERC817 Multiple passes
+        case 6
+            DatasetName = '2000-01-31-19-05-32';  % EERC8F
+        case 7
+            DatasetName = '2000-01-31-19-10-14';  % EERC1F (bad)
+        case 8
+            DatasetName = '2000-01-31-19-13-51';  % EERC1F small loop 
+        case 9
+            DatasetName = '2000-01-31-19-15-35';  % EERC1F large loop
+        case 10
+            DatasetName = '2000-01-31-19-21-26';  % EERC_DOW_DIL inout (bad) [1-32000],
+        case 11
+            DatasetName = '2000-01-31-19-47-37';  %  EERC Outside front no motion
+        case 12
+            DatasetName = '2000-01-31-19-50-23';  %  Campus {1.5, 16k, 24k, 43k, [], 76k, 90k} 
+        case 13
+            DatasetName = '2000-01-31-20-30-59';  % EERC8f elevator to ieee, 817
+        case 14
+            DatasetName = 'EERC8f handheld';  % EERC 8f IEEE, Lap, stairwells. (good)
+        case 15
+            DatasetName = 'EERC_DOW_DIL inout3';  %  handheld {1, 3k, 11k, 24k }
     end
 
 

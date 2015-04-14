@@ -98,7 +98,7 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
 
 
                     if UseChamfer
-                        hits = (Dmap(ind) <= 1); % & (Dmap(ind) > 10);
+                        hits = (Dmap(ind) == 0); % & (Dmap(ind) > 10);
                         score = sum(Dmap(ind));
                     else
                         hits = ogrid.grid(ind);

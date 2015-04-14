@@ -31,6 +31,7 @@ addpath( wd, [wd '/GICP'], ...
 
 DataPath = '../datasets/';
 
+
 %DatasetName = 'hall_and_room_w_vn';       
 %DatasetName = 'eerc_dillman_dow';         
 %DatasetName = 'campus1';                   
@@ -48,7 +49,9 @@ DataPath = '../datasets/';
 %DatasetName = '2000-01-31-20-34-36';  % garbage
          
 % DatasetName = 'EERC8f handheld';  % EERC 8f IEEE, Lap, stairwells. (good)
-DatasetName = 'EERC_DOW_DIL inout3';  %  handheld {1, 3k, 11k, 24k }
+%DatasetName = 'EERC_DOW_DIL inout3';  %  handheld {1, 3k, 11k, 24k }
+
+
 
 % Load dataset from log files
 VectorNav_Logfile = [DataPath DatasetName '/vn.csv'];
