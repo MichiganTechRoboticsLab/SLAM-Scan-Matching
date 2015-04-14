@@ -62,7 +62,8 @@ EndOfFile
 TIME_START=$(date +%s)
 
 # Run MATLAB R2014b (serial)
-$MATLAB/bin/matlab -nodisplay -nosplash -singleCompThread -r "${INPUT_FILE}(${JOB_ID},${SGE_TASK_ID})"
+# $MATLAB/bin/matlab -nodisplay -nosplash -singleCompThread -r "${INPUT_FILE}(${JOB_ID},${SGE_TASK_ID})" -logfile ../${JOB_ID}/${LOG_FILE}${ARRAY_JOB}.log
+$MATLAB/bin/matlab -nodisplay -nosplash -singleCompThread -r "${INPUT_FILE}(${JOB_ID},${SGE_TASK_ID})" 
 
 # End the timer
 TIME_END=$(date +%s)
