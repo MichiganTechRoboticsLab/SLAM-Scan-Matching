@@ -4,7 +4,7 @@ profile on
 
 % Scan ROI Settings
 step          = 1;       % Scans
-start         = 25010;   % Scan Index
+start         = 1;       % Scan Index
 numberOfScans = 500000;  % Scan Index
 skip          = 1;       % Points
 
@@ -17,18 +17,18 @@ usePrevOffsetAsGuess = false;
 useScan2World        = true;
 
 connectTheDots       = false;
-ConnectDist          = 0.1;          % (Meters )
+ConnectDist          = 0.1;         % (Meters )
 
-MaxVelocityLin       = 3;            % (Meters  / second   )
-MaxVelocityRot       = deg2rad(90);  % (Radians / second   )
-MaxAccelLin          = 0.5;          % (Meters  / second^2 )
-MaxAccelRot          = deg2rad(60);  % (Radians / second^2 )
+MaxVelocityLin       = 3;           % (Meters  / second   )
+MaxVelocityRot       = deg2rad(90); % (Radians / second   )
+MaxAccelLin          = 0.5;         % (Meters  / second^2 )
+MaxAccelRot          = deg2rad(60); % (Radians / second^2 )
 
-MapBorderSize        = 1;            % (Meters )
-MapPixelSize         = 0.05;         % (Meters )
+MapBorderSize        = 1;           % (Meters )
+MapPixelSize         = 0.1;         % (Meters )
 
-SearchResolutionLin  = 0.05;         % (Meters )
-SearchResolutionRot  = deg2rad(0.5); % (Radians )
+SearchResolutionLin  = 0.1;         % (Meters )
+SearchResolutionRot  = deg2rad(0.5);  % (Radians )
 
 
 
@@ -360,14 +360,14 @@ for scanIdx = start:step:stopIdx
         
         % Update map after distance traveled. 
         dp = abs(LastMapUpdatePose - path(end, :));
-        if (dp(1) > 0.2) || (dp(2) > 0.2) || (dp(3) > deg2rad(5))
+        if (dp(1) > 0.1) || (dp(2) > 0.1) || (dp(3) > deg2rad(5))
            LastMapUpdatePose = path(end, :);
                 
             % Only add new points to the map 
             I = ~logical(hits);
             
             % Only add points close to the sensor
-            I = I & (pol(:,2) < 5); %cos(deg2rad(0.25)) * 5m = 0.04m error (1 px)
+            %I = I & (pol(:,2) < 5); %cos(deg2rad(0.25)) * 5m = 0.04m error (1 px)
             
             % Add points to the map
             newpts = tempL(I, 1:2);
@@ -414,7 +414,7 @@ for scanIdx = start:step:stopIdx
         drawnow
   
         %set(gcf,'PaperUnits','inches','PaperPosition', [0 0 8.5 11]);
-        print([ '../' DatasetName '-dbg'],'-dpdf');
+        print([ OutPath DatasetName '-dbg'],'-dpdf');
     
         tmpW = [];
         
@@ -519,12 +519,12 @@ plot(path(:,1), path(:,2), 'r.', 'MarkerSize', 2);
 axis equal
 title(['Scan: ' num2str(scanIdx)]);
 
-hgsave([ '../' DatasetName])
+hgsave([ OutPath DatasetName])
 %saveas(gcf, '../World.png');
 %print('../World','-dpng', '-r300');
 
 set(gcf,'PaperUnits','inches','PaperPosition', [0 0 8.5 11]);
-print([ '../' DatasetName],'-dpdf');
+print([ OutPath DatasetName],'-dpdf');
 
 
 % Plot dT
@@ -562,7 +562,7 @@ tmp  = rad2deg(diff(path(:,3),n));
 tmp2 = conv(tmp, ones(fl,1) / fl);
 plot(tmp2, '-r')
 
-print('../pathDiff1','-dpng');
+print( [OutPath 'pathDiff1'],'-dpng');
 
 
 
@@ -600,6 +600,6 @@ tmp  = rad2deg(diff(path(:,3),n));
 tmp2 = conv(tmp, ones(fl,1) / fl);
 plot(tmp2, '-r')
 
-print('../pathDiff2','-dpng');
+print([OutPath 'pathDiff2'],'-dpng');
 
 
