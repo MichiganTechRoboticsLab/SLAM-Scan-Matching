@@ -25,9 +25,9 @@ MaxAccelLin          = 0.5;         % (Meters  / second^2 )
 MaxAccelRot          = deg2rad(60); % (Radians / second^2 )
 
 MapBorderSize        = 1;           % (Meters )
-MapPixelSize         = 0.01;         % (Meters )
+MapPixelSize         = 0.1;         % (Meters )
 
-SearchResolutionLin  = 0.01;         % (Meters )
+SearchResolutionLin  = 0.1;         % (Meters )
 SearchResolutionRot  = deg2rad(0.5);  % (Radians )
 
 
@@ -562,7 +562,7 @@ tmp  = rad2deg(diff(path(:,3),n));
 tmp2 = conv(tmp, ones(fl,1) / fl);
 plot(tmp2, '-r')
 
-print( [OutPath 'pathDiff1'],'-dpng');
+print( [OutPath DatasetName '-pathDiff1'],'-dpng');
 
 
 
@@ -600,6 +600,6 @@ tmp  = rad2deg(diff(path(:,3),n));
 tmp2 = conv(tmp, ones(fl,1) / fl);
 plot(tmp2, '-r')
 
-print([OutPath 'pathDiff2'],'-dpng');
+print([OutPath DatasetName '-pathDiff2'],'-dpng');
 
 
