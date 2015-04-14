@@ -25,10 +25,10 @@ MaxAccelLin          = 0.5;         % (Meters  / second^2 )
 MaxAccelRot          = deg2rad(60); % (Radians / second^2 )
 
 MapBorderSize        = 1;           % (Meters )
-MapPixelSize         = 0.1;         % (Meters )
+MapPixelSize         = 0.05;         % (Meters )
 
-SearchResolutionLin  = 0.1;         % (Meters )
-SearchResolutionRot  = deg2rad(0.5);  % (Radians )
+SearchResolutionLin  = 0.05;         % (Meters )
+SearchResolutionRot  = deg2rad(0.25);  % (Radians )
 
 
 
