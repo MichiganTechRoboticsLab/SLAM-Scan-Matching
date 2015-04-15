@@ -3,10 +3,19 @@ clc
 profile on
 
 % Scan ROI Settings
-step          = 1;       % Scans
-start         = 1;       % Scan Index
-numberOfScans = 500000;  % Scan Index
-skip          = 1;       % Points
+if exist('StartIndex', 'var')
+  start       = StartIndex; % Scan Index
+else
+  start       = 1;          % Scan Index
+end
+
+if exist('StopIndex', 'var')
+  stop        = StopIndex; % Scan Index
+else
+  stop        = 1e7;       % Scan Index
+end
+
+step          = 1;         % Scan frame skip
 
 
 % Framework Options
@@ -41,7 +50,6 @@ end
 
 % Initialize State Variables
 nScanIndex = unique(Lidar_ScanIndex);
-stop       = start + step * numberOfScans;
 
 map        = [];
 pose       = [0 0 0];
@@ -114,7 +122,7 @@ for scanIdx = start:step:stopIdx
         
         if connectTheDots
             % Linear interpolation of 'connected' map points
-            map = fillLidarData(map(1:skip:end,:), 270, ConnectDist);
+            map = fillLidarData(map, 270, ConnectDist);
         end
         
         prev_stamp = stamp;
@@ -135,8 +143,8 @@ for scanIdx = start:step:stopIdx
               sin(theta)  cos(theta) dy ;
               0           0          1  ];
         
-        scanWorldFrame = [scan(1:skip:end,:) ones(size(scan,1), 1)];
-        scanWorldFrame = scanWorldFrame(1:skip:end,:) * M';
+        scanWorldFrame = [scan ones(size(scan,1), 1)];
+        scanWorldFrame = scanWorldFrame * M';
         scanWorldFrame = scanWorldFrame(:,[1,2]);
         
         % extract points around the current scan for a reference map
@@ -150,7 +158,7 @@ for scanIdx = start:step:stopIdx
     
     % Linear interpolation of 'connected' scan points
     if connectTheDots
-        scan = fillLidarData(scan(1:skip:end,:), 270, ConnectDist);
+        scan = fillLidarData(scan), 270, ConnectDist);
     end
     
     

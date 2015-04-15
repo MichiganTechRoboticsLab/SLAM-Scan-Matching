@@ -5,7 +5,7 @@
 #$ -S /bin/bash
 #$ -M dawonnac@mtu.edu
 #$ -m abes
-#$ -q long.q
+#$ -q short.q
 #$ -t 1-14
 #$ -hold_jid 1596
 #$ -hard -l mem_free=1G
@@ -44,7 +44,7 @@ cat << EndOfFile > $INIT_DIR/job_info.$JOB_ID${ARRAY_JOB}
   Scratch directory    : $PWD
   Program              : MATLAB R2014b (serial)
   Input file           : mattest
-  Queue                : long.q
+  Queue                : short.q
   Array job            : Yes
   Task ID range        : ${SGE_TASK_ID} of 1-14
   Exclusive access     : No
