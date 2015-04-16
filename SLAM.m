@@ -11,7 +11,7 @@ skip          = 1;       % Points
 
 % Framework Options
 verbose              = false;
-debugplots           = false;
+debugplots           = true;
 
 usePrevOffsetAsGuess = false;
 useScan2World        = true;
@@ -368,14 +368,14 @@ for scanIdx = start:step:stopIdx
            LastMapUpdatePose = path(end, :);
                 
             % Only add new points to the map 
-            I = ~logical(hits);
-            
-            % Only add points close to the sensor
-            %I = I & (pol(:,2) < 5); %cos(deg2rad(0.25)) * 5m = 0.04m error (1 px)
-            
-            % Add points to the map
-            newpts = tempL(I, 1:2);
-            world = [world; newpts];
+            if algo == 6
+              I = ~logical(hits);
+              newpts = tempL(I, 1:2);            
+              world = [world; newpts];
+            else
+              newpts = tempL(:, 1:2);  
+              world = [world; newpts];              
+            end
         end
         
         % Update when new hits are detected
