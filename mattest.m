@@ -86,6 +86,6 @@ function mattest( jobID, taskID )
 
     SLAM
 
-    save([ OutPath DatasetName '.mat']);
+    save([ OutPath DatasetName '.mat'], '-v7.3');
 end
 

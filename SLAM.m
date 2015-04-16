@@ -3,41 +3,32 @@ clc
 profile on
 
 % Scan ROI Settings
-if exist('StartIndex', 'var')
-  start       = StartIndex; % Scan Index
-else
-  start       = 1;          % Scan Index
-end
-
-if exist('StopIndex', 'var')
-  stop        = StopIndex; % Scan Index
-else
-  stop        = 1e7;       % Scan Index
-end
-
-step          = 1;         % Scan frame skip
+step          = 1;       % Scans
+start         = 1;       % Scan Index
+stop          = 10000;   % Scan Index
+skip          = 1;       % Points
 
 
 % Framework Options
 verbose              = false;
-debugplots           = true;
+debugplots           = false;
 
 usePrevOffsetAsGuess = false;
 useScan2World        = true;
 
 connectTheDots       = false;
-ConnectDist          = 0.1;         % (Meters )
+ConnectDist          = 0.1;          % (Meters )
 
-MaxVelocityLin       = 3;           % (Meters  / second   )
-MaxVelocityRot       = deg2rad(90); % (Radians / second   )
-MaxAccelLin          = 0.5;         % (Meters  / second^2 )
-MaxAccelRot          = deg2rad(60); % (Radians / second^2 )
+MaxVelocityLin       = 3;            % (Meters  / second   )
+MaxVelocityRot       = deg2rad(120); % (Radians / second   )
+MaxAccelLin          = 0.5;          % (Meters  / second^2 )
+MaxAccelRot          = deg2rad(60);  % (Radians / second^2 )
 
-MapBorderSize        = 1;           % (Meters )
-MapPixelSize         = 0.1;         % (Meters )
+MapBorderSize        = 1;            % (Meters )
+MapPixelSize         = 0.05;         % (Meters )
 
-SearchResolutionLin  = 0.1;         % (Meters )
-SearchResolutionRot  = deg2rad(0.5);  % (Radians )
+SearchResolutionLin  = MapPixelSize; % (Meters )
+SearchResolutionRot  = deg2rad(0.1);   % (Radians )
 
 
 
@@ -122,7 +113,7 @@ for scanIdx = start:step:stopIdx
         
         if connectTheDots
             % Linear interpolation of 'connected' map points
-            map = fillLidarData(map, 270, ConnectDist);
+            map = fillLidarData(map(1:skip:end,:), 270, ConnectDist);
         end
         
         prev_stamp = stamp;
@@ -143,8 +134,8 @@ for scanIdx = start:step:stopIdx
               sin(theta)  cos(theta) dy ;
               0           0          1  ];
         
-        scanWorldFrame = [scan ones(size(scan,1), 1)];
-        scanWorldFrame = scanWorldFrame * M';
+        scanWorldFrame = [scan(1:skip:end,:) ones(size(scan,1), 1)];
+        scanWorldFrame = scanWorldFrame(1:skip:end,:) * M';
         scanWorldFrame = scanWorldFrame(:,[1,2]);
         
         % extract points around the current scan for a reference map
@@ -158,19 +149,24 @@ for scanIdx = start:step:stopIdx
     
     % Linear interpolation of 'connected' scan points
     if connectTheDots
-        scan = fillLidarData(scan), 270, ConnectDist);
+        scan = fillLidarData(scan(1:skip:end,:), 270, ConnectDist);
     end
     
     
     % Search area
     if usePrevOffsetAsGuess
-        rmax = max(MaxAccelRot*(stamp - prev_stamp), SearchResolutionRot);
-        tmax = max(MaxAccelLin*(stamp - prev_stamp), SearchResolutionLin);
+        rmax = MaxAccelRot;
+        tmax = MaxAccelLin;
     else
-        rmax = max(MaxVelocityRot*(stamp - prev_stamp), SearchResolutionRot);
-        tmax = max(MaxVelocityLin*(stamp - prev_stamp), SearchResolutionLin);
+        rmax = MaxVelocityRot;
+        tmax = MaxVelocityLin;
     end
-
+  
+    dt   = min(stamp - prev_stamp, 0.5);    % limit data loss time.
+    rmax = rmax * dt;                       
+    tmax = tmax * dt;                       
+    rmax = max(rmax, SearchResolutionRot);  
+    tmax = max(tmax, SearchResolutionLin);  
   
     
     % Initial Guess
