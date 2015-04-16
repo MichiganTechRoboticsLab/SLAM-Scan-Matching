@@ -14,7 +14,7 @@ function mattest( jobID, taskID )
     % 5: ICP1
     % 6: Chamfer
 
-    algo = 6;
+    algo = 5;
 
 
     % Set up paths

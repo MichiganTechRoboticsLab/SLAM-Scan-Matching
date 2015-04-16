@@ -4,14 +4,14 @@ profile on
 
 % Scan ROI Settings
 step          = 1;       % Scans
-start         = 1;       % Scan Index
+start         = 100;     % Scan Index
 stop          = 10000;   % Scan Index
 skip          = 1;       % Points
 
 
 % Framework Options
 verbose              = false;
-debugplots           = true;
+debugplots           = false;
 
 usePrevOffsetAsGuess = false;
 useScan2World        = true;
@@ -256,7 +256,7 @@ for scanIdx = start:step:stopIdx
             [tr, tt] = icp1(p, q, maxIterations, tt, tr, ...
                             'Matching'      , 'kDtree' , ...
                             'Minimize'      , 'point'  , ...
-                            'WorstRejection', 0.1);
+                            'WorstRejection', 0.02);
             
             T(1) = tt(1);
             T(2) = tt(2);
