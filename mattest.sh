@@ -6,7 +6,7 @@
 #$ -M dawonnac@mtu.edu
 #$ -m abes
 #$ -q long.q
-#$ -t 1-14
+#$ -t 1-10
 #$ -hold_jid 1596
 #$ -hard -l mem_free=1G
 #$ -hard -l matlab_lic=1
@@ -46,7 +46,7 @@ cat << EndOfFile > $INIT_DIR/job_info.$JOB_ID${ARRAY_JOB}
   Input file           : mattest
   Queue                : long.q
   Array job            : Yes
-  Task ID range        : ${SGE_TASK_ID} of 1-14
+  Task ID range        : ${SGE_TASK_ID} of 1-10
   Exclusive access     : No
   Dependent job ID     : 1596
   SMS notification     : No

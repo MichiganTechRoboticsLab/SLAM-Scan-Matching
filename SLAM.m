@@ -4,14 +4,14 @@ profile on
 
 % Scan ROI Settings
 step          = 1;       % Scans
-start         = 100;     % Scan Index
-stop          = 10000;   % Scan Index
+%start         = 100;     % Scan Index
+%stop          = 10000;   % Scan Index
 skip          = 1;       % Points
 
 
 % Framework Options
 verbose              = false;
-debugplots           = false;
+debugplots           = true;
 
 usePrevOffsetAsGuess = false;
 useScan2World        = true;
@@ -113,7 +113,7 @@ for scanIdx = start:step:stopIdx
         
         if connectTheDots
             % Linear interpolation of 'connected' map points
-            map = fillLidarData(map(1:skip:end,:), 270, ConnectDist);
+            map = fillLidarData(map, 270, ConnectDist);
         end
         
         prev_stamp = stamp;
@@ -134,8 +134,8 @@ for scanIdx = start:step:stopIdx
               sin(theta)  cos(theta) dy ;
               0           0          1  ];
         
-        scanWorldFrame = [scan(1:skip:end,:) ones(size(scan,1), 1)];
-        scanWorldFrame = scanWorldFrame(1:skip:end,:) * M';
+        scanWorldFrame = [scan ones(size(scan,1), 1)];
+        scanWorldFrame = scanWorldFrame * M';
         scanWorldFrame = scanWorldFrame(:,[1,2]);
         
         % extract points around the current scan for a reference map
@@ -149,7 +149,7 @@ for scanIdx = start:step:stopIdx
     
     % Linear interpolation of 'connected' scan points
     if connectTheDots
-        scan = fillLidarData(scan(1:skip:end,:), 270, ConnectDist);
+        scan = fillLidarData(scan, 270, ConnectDist);
     end
     
     
@@ -221,26 +221,25 @@ for scanIdx = start:step:stopIdx
 
         case 3  % Hill- Climbing  
                        
-            [T, ~    ] = hcm(T, scan, map,         ...
-                             'pixelSize'    , 0.1, ...
-                             'maxIterations', 15   );
+            [T, ~    ] = hcm(T, scan, map,                  ...
+                             'pixelSize'    , MapPixelSize, ...
+                             'maxIterations', 30   );
         
             
-        case 4 % libicp
+        case 4 % libicp (Uses mex function)
            
             ti = [ cos(T(3)) -sin(T(3)) T(1) ;
                    sin(T(3))  cos(T(3)) T(2) ;
                    0          0         1    ];
             
-            % Often seg faults.....
-            t = icpMex(map', scan', ti, 0.2, 'point_to_point');
+            t = icpMex(map', scan', ti, tmax, 'point_to_point');
             
             T(1) = t(1,3);
             T(2) = t(2,3);
             T(3) = atan2(t(2,1), t(1,1));
             
         
-        case 5 % ICP1
+        case 5 % ICP1 (pure matlab, but slow)
             
             maxIterations = 30;
             
