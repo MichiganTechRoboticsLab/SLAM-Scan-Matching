@@ -14,7 +14,7 @@ function mattest( jobID, taskID )
     % 5: ICP1
     % 6: Chamfer
 
-    algo = 4;
+    algo = 6;
 
 
     % Set up paths
@@ -30,15 +30,17 @@ function mattest( jobID, taskID )
                  [wd '/util']);
 
     % Output Path
-    OutPath = ['../' num2str(jobID) '/' num2str(taskID, '%3u') '-'];
-    mkdir(OutPath);
+    OutPath = ['../' num2str(jobID) '/'  ];
 
     % Keep a copy of the settings with the results
-    pause(taskID);
-    if ~exist([OutPath 'SLAM.m'], 'file')
+    if taskID == 1
+      mkdir(OutPath);
       copyfile('SLAM.m'   , OutPath)
       copyfile('mattest.m', OutPath)
     end
+
+    % Add task prefix to each file
+    OutPath = [OutPath num2str(taskID, '%3u') '-'];
 
     %Default dataset ROI
     start         = 1;     % Scan Index
@@ -52,30 +54,37 @@ function mattest( jobID, taskID )
 
     switch taskID
         case 1
-            DatasetName = 'hall_and_room_w_vn';
-        case 2
             DatasetName = 'eerc_dillman_dow';  
             %stop        = 20000;
-        case 3
+        case 2
             DatasetName = 'campus1'; 
-            %stop        = 25000;
+            start       = 200;   
+            %stop       = 25000;
+        case 3
+            DatasetName = 'eerc_dow_dill_inout';
+            % Before the Hill
+            start       = 20;
+            stop        = 19000;
         case 4
-            DatasetName = 'eerc_dow_dill_inout';  % Bad timestamp early in dataset {20}
-            start       = 20;   
+            DatasetName = 'eerc_dow_dill_inout';
+            % After the Hill
+            start       = 22500;
+            stop        = 38000;   
         case 5
-            DatasetName = '2000-01-31-19-05-32';  % EERC8F
-        case 6
-            DatasetName = '2000-01-31-19-21-26';  % EERC_DOW_DIL inout  [1-32000],
+            % EERC_DOW_DIL inout  [1-32000],  
+            DatasetName = '2000-01-31-19-21-26';  
+        case 6 
+            % Night with Natalie #1 (EERC 8F)
+            DatasetName = '2015-04-17-00-44-23';  
+            stop        = 14500;
         case 7
-            DatasetName = '2000-01-31-19-50-23';  % Campus {1.5, 16k, 24k, 43k, [], 76k, 90k} 
+            % Night with Natalie #1 (EERC DOW DIL)
+            DatasetName = '2015-04-17-00-44-23';  
+            start       = 15200;           
         case 8
-            DatasetName = '2000-01-31-20-30-59';  % EERC8f elevator to ieee, 817
-        case 9
-            DatasetName = 'EERC8f handheld';      % EERC 8f IEEE, Lab, stairwells. (good)
-            start       = 500;   
-        case 10
-            DatasetName = 'EERC_DOW_DIL inout3';  % Handheld {EERC8F 1, EERC 1F 3k, 11k, 24k }
-            start       = 3000;   
+            % Night with Natalie #2 (EERC 8F)
+            DatasetName = '2015-04-17-01-30-48';  
+            start       = 50;              
     end
 
 
@@ -93,7 +102,7 @@ function mattest( jobID, taskID )
 
     % Remove debug plot when finished
     if exist([ OutPath DatasetName '-dbg.pdf' ], 'file')
-      delete[ OutPath DatasetName '-dbg.pdf' ]
+      delete([ OutPath DatasetName '-dbg.pdf' ]);
     end
     
     % Save result

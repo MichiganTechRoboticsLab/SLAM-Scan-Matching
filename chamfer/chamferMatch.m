@@ -72,7 +72,7 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
             tmpX = ((ogrid.maxX - ogrid.minX + ogrid.pixelSize) / size(ogrid.grid, 1));
             tmpY = ((ogrid.maxY - ogrid.minY + ogrid.pixelSize) / size(ogrid.grid, 2));
 
-            for x = (-t:SearchLin:t) + T(1,1);
+            for x = (-t:SearchLin:t) + T(1,1)
                 for y = (-t:SearchLin:t) + T(1,2)
 
                     % Translate points and convert to pixel coords
@@ -98,10 +98,10 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
 
 
                     if UseChamfer
-                        hits = (Dmap(ind) == 0); % & (Dmap(ind) > 10);
+                        hits  = (Dmap(ind) <= 0); % & (Dmap(ind) > 10);
                         score = sum(Dmap(ind));
                     else
-                        hits = ogrid.grid(ind);
+                        hits  = ogrid.grid(ind);
                         score = sum(hits);
                     end
 
@@ -123,10 +123,10 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
             end
         end
         T = Tbest;
-    else
+    end
     
     % Hi-Lo Search
-
+    if 0
     %    t = SearchLin;
     %    r = SearchRot;
 
@@ -143,11 +143,8 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
                 S = (m * scan')';
 
 
-                for x = ([-t 0 t]) + T(1,1);
+                for x = ([-t 0 t]) + T(1,1)
                     for y = ([-t 0 t]) + T(1,2)
-
-                        % Translate scan
-                        %s = S + repmat([x y], size(S,1), 1);
 
                         % Convert to pixel coords
                         Sx0 = (S(:,1) + (x - ogrid.minX)) / (ogrid.maxX - ogrid.minX + ogrid.pixelSize) * size(ogrid.grid, 1);
@@ -168,12 +165,12 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
                         siz = size(ogrid.grid);
                         ind = Sx2 + (Sy2 - 1).*siz(1);                    
                                                
-                        hits = ogrid.grid(ind);
                             
                         if UseChamfer
-                            hits = Dmap(ind) <= 1;
+                            hits  = Dmap(ind) <= 1;
                             score = sum(Dmap(ind));
                         else 
+                            hits  = ogrid.grid(ind);
                             score = sum(hits);
                         end
 
@@ -201,6 +198,90 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
             T = Tbest;
         end
     end
+    
+    
+    
+    
+    % Decent walk
+    if 1
+    %    t = SearchLin;
+    %    r = SearchRot;
+
+        t = SearchLin;
+        r = SearchRot;
+
+        imax = 0;
+        while imax < 10
+
+            for theta = ([-r 0 r]) + T(1,3)
+
+                % Rotate scan
+                m = [cos(theta) -sin(theta);
+                     sin(theta)  cos(theta)] ;
+                S = (m * scan')';
+
+
+                for x = ([-t 0 t]) + T(1,1)
+                    for y = ([-t 0 t]) + T(1,2)
+
+                        % Convert to pixel coords
+                        Sx0 = (S(:,1) + (x - ogrid.minX)) / (ogrid.maxX - ogrid.minX + ogrid.pixelSize) * size(ogrid.grid, 1);
+                        Sy0 = (S(:,2) + (y - ogrid.minY)) / (ogrid.maxY - ogrid.minY + ogrid.pixelSize) * size(ogrid.grid, 2);
+
+                        Sx1 = round(Sx0);  
+                        Sy1 = round(Sy0);
+
+                        % Bounds Checking
+                        I = (Sx1 < 1) | ...
+                            (Sy1 < 1) | ...
+                            (Sx1 > size(ogrid.grid, 1)) | ...
+                            (Sy1 > size(ogrid.grid, 2)) ;
+                        Sx2 = Sx1(~I);
+                        Sy2 = Sy1(~I);
+
+                        % Fitness
+                        siz = size(ogrid.grid);
+                        ind = Sx2 + (Sy2 - 1).*siz(1);                    
+                                               
+                        if UseChamfer
+                            hits  = Dmap(ind) <= 1;
+                            score = sum(Dmap(ind));
+                        else 
+                            hits  = ogrid.grid(ind);
+                            score = sum(hits);
+                        end
+
+                        % Keep best score
+                        if UseChamfer
+                            if score < bestScore(end)
+                                Tbest     = [x y theta];
+                                bestScore = score;  
+                                bestHits  = hits;                          
+                            end
+                        else
+                            if score > bestScore(end)
+                                Tbest     = [x y theta];
+                                bestScore = score;  
+                                bestHits  = hits;                          
+                            end
+                        end
+                   end 
+                end
+            end
+
+            if T == Tbest
+              r = r/2;
+              t = t/2;
+              %break;
+            end
+
+            % Init Next Iteration
+            T = Tbest;
+            imax = imax + 1;
+        end
+    end
+    
+    
     
     if verbose
         fprintf('Chamfer: Search took %.4f seconds. \n', toc(searchTic))

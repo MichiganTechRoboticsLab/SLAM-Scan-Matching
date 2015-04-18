@@ -11,7 +11,7 @@ skip          = 1;       % Points
 
 % Framework Options
 verbose              = false;
-debugplots           = true;
+debugplots           = false;
 
 usePrevOffsetAsGuess = false;
 useScan2World        = true;
@@ -25,11 +25,14 @@ MaxAccelLin          = 0.5;          % (Meters  / second^2 )
 MaxAccelRot          = deg2rad(60);  % (Radians / second^2 )
 
 MapBorderSize        = 1;            % (Meters )
-MapPixelSize         = 0.05;         % (Meters )
+MapPixelSize         = 0.1;         % (Meters )
 
-SearchResolutionLin  = MapPixelSize; % (Meters )
-SearchResolutionRot  = deg2rad(0.1);   % (Radians )
+SearchResolutionLin  = 0.05; % (Meters )
+SearchResolutionRot  = deg2rad(0.5); % (Radians )
 
+% Update map after distance traveled. 
+UpdateMapDT = 0.2;
+UpdateMapDR = deg2rad(5);
 
 
 % Algorithm Specific
@@ -49,7 +52,7 @@ world      = [];
 T          = [0 0 0];
 init_guess = [0 0 0];
 LastMapUpdatePose = [0 0 0];
-
+SearchRange = [];
 
 
 % Clear all figures before running
@@ -167,7 +170,14 @@ for scanIdx = start:step:stopIdx
     tmax = tmax * dt;                       
     rmax = max(rmax, SearchResolutionRot);  
     tmax = max(tmax, SearchResolutionLin);  
+    
+    % Rotation range limit
+    rmax = min(rmax,  deg2rad(180));
+    rmax = max(rmax, -deg2rad(180));
   
+    % Search area history
+    SearchRange = [SearchRange; tmax rmax];
+    
     
     % Initial Guess
     T = init_guess;
@@ -363,7 +373,9 @@ for scanIdx = start:step:stopIdx
         
         % Update map after distance traveled. 
         dp = abs(LastMapUpdatePose - path(end, :));
-        if (dp(1) > 0.1) || (dp(2) > 0.1) || (dp(3) > deg2rad(5))
+        if (dp(1) > UpdateMapDT) || ...
+           (dp(2) > UpdateMapDT) || ... 
+           (dp(3) > UpdateMapDR)
            LastMapUpdatePose = path(end, :);
                 
             % Only add new points to the map 
@@ -503,6 +515,12 @@ fprintf('ScanMatcher: Logfile length %.4f seconds. \n', realTime)
 profile off
 %profile viewer
 %profsave;
+p = profile('info');
+save([ OutPath DatasetName 'profdata'], p);
+clear p
+%load myprofiledata
+%profview(0,p)
+
 
 % Plot World
 
@@ -536,30 +554,30 @@ n = 1;
 change_current_figure(2);
 clf
 subplot(3,1,1);
-plot(diff(path(:,1),n), 'r.')
+plot(diff(path(:,1),n) , 'r.')
 hold on
-plot( tmax * ones(size(path(:,1))), 'b-')
-plot(-tmax * ones(size(path(:,1))), 'b-')
+plot( SearchRange(:,1), 'b.')
+plot(-SearchRange(:,1), 'b.')
 title(['X: diff(path(:,1),' num2str(n) ')'])
 tmp  = diff(path(:,1),n);
 tmp2 = conv(tmp, ones(fl,1) / fl);
 plot(tmp2, '-b')
 
 subplot(3,1,2);
-plot(diff(path(:,2),n), 'g.')
+plot(diff(path(:,2),n), 'r.')
 hold on
-plot( tmax * ones(size(path(:,1))), 'b-')
-plot(-tmax * ones(size(path(:,1))), 'b-')
+plot( SearchRange(:,1), 'b.')
+plot(-SearchRange(:,1), 'b.')
 title(['Y: diff(path(:,2),' num2str(n) ')'])
 tmp  = diff(path(:,2),n);
 tmp2 = conv(tmp, ones(fl,1) / fl);
 plot(tmp2, '-b')
 
 subplot(3,1,3);
-plot(rad2deg(diff(path(:,3),n)), 'b.')
+plot(rad2deg(diff(path(:,3),n)), 'r.')
 hold on
-plot( rad2deg(rmax) * ones(size(path(:,1))), 'b-')
-plot(-rad2deg(rmax) * ones(size(path(:,1))), 'b-')
+plot( rad2deg(SearchRange(:,2)), 'b.')
+plot(-rad2deg(SearchRange(:,2)), 'b.')
 title(['Z: diff(path(:,3),' num2str(n) ')'])
 tmp  = rad2deg(diff(path(:,3),n));
 tmp2 = conv(tmp, ones(fl,1) / fl);
@@ -568,41 +586,5 @@ plot(tmp2, '-r')
 print( [OutPath DatasetName '-pathDiff1'],'-dpng');
 
 
-
-% Plot dT2
-n = 2;
-change_current_figure(3);
-clf
-subplot(3,1,1);
-plot(diff(path(:,1),n), 'r.')
-hold on
-plot( tmax * ones(size(path(:,1))), 'b-')
-plot(-tmax * ones(size(path(:,1))), 'b-')
-title(['X: diff(path(:,1),' num2str(n) ')'])
-tmp  = diff(path(:,1),n);
-tmp2 = conv(tmp, ones(fl,1) / fl);
-plot(tmp2, '-b')
-
-subplot(3,1,2);
-plot(diff(path(:,2),n), 'g.')
-hold on
-plot( tmax * ones(size(path(:,1))), 'b-')
-plot(-tmax * ones(size(path(:,1))), 'b-')
-title(['Y: diff(path(:,2),' num2str(n) ')'])
-tmp  = diff(path(:,2),n);
-tmp2 = conv(tmp, ones(fl,1) / fl);
-plot(tmp2, '-b')
-
-subplot(3,1,3);
-plot(rad2deg(diff(path(:,3),n)), 'b.')
-hold on
-plot( rad2deg(rmax) * ones(size(path(:,1))), 'b-')
-plot(-rad2deg(rmax) * ones(size(path(:,1))), 'b-')
-title(['Z: diff(path(:,3),' num2str(n) ')'])
-tmp  = rad2deg(diff(path(:,3),n));
-tmp2 = conv(tmp, ones(fl,1) / fl);
-plot(tmp2, '-r')
-
-print([OutPath DatasetName '-pathDiff2'],'-dpng');
 
 
