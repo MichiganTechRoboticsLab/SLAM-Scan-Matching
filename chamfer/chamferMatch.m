@@ -207,8 +207,8 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
     %    t = SearchLin;
     %    r = SearchRot;
 
-        t = SearchLin;
-        r = SearchRot;
+        t = SearchLin/2;
+        r = SearchRot/2;
 
         imax = 0;
         while imax < 5

@@ -14,7 +14,7 @@ function mattest( jobID, taskID )
     % 5: ICP1
     % 6: Chamfer
 
-    algo = 4;
+    algo = 6;
 
 
     % Set up paths
@@ -53,45 +53,44 @@ function mattest( jobID, taskID )
     DataPath = '../datasets/';
 
     switch taskID
-        case 1
+        case 3 %1
             DatasetName = 'eerc_dillman_dow';  
             %stop        = 20000;
-        case 2
+        case 9 %2
             DatasetName = 'campus1'; 
             start       = 200;   
             %stop       = 25000;
-        case 3
+        case 5 %3
             DatasetName = 'eerc_dow_dill_inout';
             % Before the Hill
             start       = 20;
             stop        = 19000;
-        case 4
+        case 4 %4
             DatasetName = 'eerc_dow_dill_inout';
             % After the Hill
             start       = 22550;
             stop        = 38000;   
-        case 5
+        case 6 %5
             % EERC_DOW_DIL inout2 
             DatasetName = '2000-01-31-19-21-26'; 
             start       = 3000; 
-            stop        = 40000; 
-        case 6 
+            stop        = 42000; 
+        case 1 %6
             % Night with Natalie #1 (EERC 8F)
             DatasetName = '2015-04-17-00-44-23';  
             stop        = 13500;
-        case 7
+        case 7 %7
             % Night with Natalie #1 (EERC DOW DIL)
             DatasetName = '2015-04-17-00-44-23';  
-            start       = 15200;  
-            stop        = 55000;         
-        case 8
+            start       = 15200;         
+        case 2 %8
             % Night with Natalie #2 (EERC 8F)
             DatasetName = '2015-04-17-01-30-48';  
             start       = 50;              
-        case 9
+        case 8 %9
             % EERC_DOW_DIL inout2 
             DatasetName = '2000-01-31-19-21-26'; 
-            start       = 42000; 
+            start       = 42200;  % 42500 too late
     end
 
 
@@ -105,7 +104,23 @@ function mattest( jobID, taskID )
     % Simulated data for PSM
     useSimWorld = false;
 
+    
+    profile on
+
+
+
     SLAM
+
+
+
+    profile off
+    %profile viewer
+    p = profile('info');
+    save([ OutPath DatasetName '-profdata'], 'p');
+    profsave(profile('info'), [ OutPath DatasetName '-prof']);
+    %load myprofiledata
+    %profview(0,p)
+
 
     % Remove debug plot when finished
     if exist([ OutPath DatasetName '-dbg.pdf' ], 'file')

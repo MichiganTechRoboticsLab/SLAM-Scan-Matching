@@ -1,6 +1,5 @@
 clc
 
-profile on
 
 % Scan ROI Settings
 step          = 1;       % Scans
@@ -19,16 +18,16 @@ useScan2World        = true;
 connectTheDots       = false;
 ConnectDist          = 0.1;          % (Meters )
 
-MaxVelocityLin       = 6;            % (Meters  / second   )
-MaxVelocityRot       = deg2rad(120); % (Radians / second   )
+MaxVelocityLin       = 4;            % (Meters  / second   )
+MaxVelocityRot       = deg2rad(90); % (Radians / second   )
 MaxAccelLin          = 0.5;          % (Meters  / second^2 )
 MaxAccelRot          = deg2rad(60);  % (Radians / second^2 )
 
 MapBorderSize        = 1;            % (Meters )
-MapPixelSize         = 0.05;         % (Meters )
+MapPixelSize         = 0.025;         % (Meters )
 
-SearchResolutionLin  = 0.1; % (Meters )
-SearchResolutionRot  = deg2rad(1); % (Radians )
+SearchResolutionLin  = 0.05; % (Meters )
+SearchResolutionRot  = deg2rad(0.5); % (Radians )
 
 % Update map after distance traveled. 
 UpdateMapDT = 0.1;
@@ -53,6 +52,7 @@ T          = [0 0 0];
 init_guess = [0 0 0];
 LastMapUpdatePose = [0 0 0];
 SearchRange = [];
+UpdateMap  = true;
 
 
 % Clear all figures before running
@@ -126,7 +126,7 @@ for scanIdx = start:step:stopIdx
     
     
     % Generate a local map from the world map
-    if useScan2World
+    if useScan2World && UpdateMap
         
         % Translate current scan to map coordinates
         dx    = init_guess(1);
@@ -313,24 +313,7 @@ for scanIdx = start:step:stopIdx
         % Add previous scan to pose
         pose = pose + [mapT(1:2)', T(3)];
     end
-%     if(useSimWorld)
-%         fprintf('ScanMatcher: Scan %d pose is ', scanIdx);
-%         tmp = pose;
-%         tmp(3) = rad2deg(tmp(3));
-%         fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
-%     
-%         goodPose = LidarPose(scanIdx,1:3);
-%         tmp = goodPose;
-%         tmp(3) = rad2deg(tmp(3));
-%         fprintf('ScanMatcher: Scan %d pose should be ', scanIdx);
-%         fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
-%         poseErr = goodPose - pose;
-%         tmp = poseErr;
-%         tmp(3) = rad2deg(tmp(3));
-%         fprintf('ScanMatcher: Scan %d pose err: ', scanIdx);
-%         fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
-%         
-%     end
+
     path(end+1,:) = pose;
     
     % Make Sure Scan in proper Coordinates
@@ -373,9 +356,10 @@ for scanIdx = start:step:stopIdx
         
         % Update map after distance traveled. 
         dp = abs(LastMapUpdatePose - path(end, :));
-        if (dp(1) > UpdateMapDT) || ...
-           (dp(2) > UpdateMapDT) || ... 
-           (dp(3) > UpdateMapDR)
+        UpdateMap = (dp(1) > UpdateMapDT) || ...
+                    (dp(2) > UpdateMapDT) || ... 
+                    (dp(3) > UpdateMapDR);
+        if UpdateMap
            LastMapUpdatePose = path(end, :);
                 
             % Only add new points to the map 
@@ -462,8 +446,10 @@ for scanIdx = start:step:stopIdx
     
     % Select the map for the next scan
     if useScan2World
-        map = world;
         
+        if UpdateMap
+          map = world;
+        end 
         %MaxMapSize = 100000;
         %sz = size(world, 1);
         %if sz > MaxMapSize            
@@ -512,14 +498,6 @@ toc(startTime)
 realTime = Lidar_Timestamp_Sensor(scanIdx) - Lidar_Timestamp_Sensor(start);
 fprintf('ScanMatcher: Logfile length %.4f seconds. \n', realTime)
 
-profile off
-%profile viewer
-%profsave;
-p = profile('info');
-save([ OutPath DatasetName '-profdata'], 'p');
-clear p
-%load myprofiledata
-%profview(0,p)
 
 
 % Plot World
