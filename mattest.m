@@ -14,7 +14,7 @@ function mattest( jobID, taskID )
     % 5: ICP1
     % 6: Chamfer
 
-    algo = 6;
+    algo = 4;
 
 
     % Set up paths
@@ -68,23 +68,30 @@ function mattest( jobID, taskID )
         case 4
             DatasetName = 'eerc_dow_dill_inout';
             % After the Hill
-            start       = 22500;
+            start       = 22550;
             stop        = 38000;   
         case 5
-            % EERC_DOW_DIL inout  [1-32000],  
-            DatasetName = '2000-01-31-19-21-26';  
+            % EERC_DOW_DIL inout2 
+            DatasetName = '2000-01-31-19-21-26'; 
+            start       = 3000; 
+            stop        = 40000; 
         case 6 
             % Night with Natalie #1 (EERC 8F)
             DatasetName = '2015-04-17-00-44-23';  
-            stop        = 14500;
+            stop        = 13500;
         case 7
             % Night with Natalie #1 (EERC DOW DIL)
             DatasetName = '2015-04-17-00-44-23';  
-            start       = 15200;           
+            start       = 15200;  
+            stop        = 55000;         
         case 8
             % Night with Natalie #2 (EERC 8F)
             DatasetName = '2015-04-17-01-30-48';  
             start       = 50;              
+        case 9
+            % EERC_DOW_DIL inout2 
+            DatasetName = '2000-01-31-19-21-26'; 
+            start       = 42000; 
     end
 
 

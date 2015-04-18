@@ -211,7 +211,7 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
         r = SearchRot;
 
         imax = 0;
-        while imax < 10
+        while imax < 5
 
             for theta = ([-r 0 r]) + T(1,3)
 

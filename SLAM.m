@@ -11,7 +11,7 @@ skip          = 1;       % Points
 
 % Framework Options
 verbose              = false;
-debugplots           = false;
+debugplots           = true;
 
 usePrevOffsetAsGuess = false;
 useScan2World        = true;
@@ -19,19 +19,19 @@ useScan2World        = true;
 connectTheDots       = false;
 ConnectDist          = 0.1;          % (Meters )
 
-MaxVelocityLin       = 3;            % (Meters  / second   )
+MaxVelocityLin       = 6;            % (Meters  / second   )
 MaxVelocityRot       = deg2rad(120); % (Radians / second   )
 MaxAccelLin          = 0.5;          % (Meters  / second^2 )
 MaxAccelRot          = deg2rad(60);  % (Radians / second^2 )
 
 MapBorderSize        = 1;            % (Meters )
-MapPixelSize         = 0.1;         % (Meters )
+MapPixelSize         = 0.05;         % (Meters )
 
-SearchResolutionLin  = 0.05; % (Meters )
-SearchResolutionRot  = deg2rad(0.5); % (Radians )
+SearchResolutionLin  = 0.1; % (Meters )
+SearchResolutionRot  = deg2rad(1); % (Radians )
 
 % Update map after distance traveled. 
-UpdateMapDT = 0.2;
+UpdateMapDT = 0.1;
 UpdateMapDR = deg2rad(5);
 
 
@@ -516,7 +516,7 @@ profile off
 %profile viewer
 %profsave;
 p = profile('info');
-save([ OutPath DatasetName 'profdata'], p);
+save([ OutPath DatasetName '-profdata'], 'p');
 clear p
 %load myprofiledata
 %profview(0,p)
