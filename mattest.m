@@ -10,11 +10,11 @@ function mattest( jobID, taskID )
     % 1: Olsen
     % 2: PSM           (Doens't Work)
     % 3: Hill-Climbing
-    % 4: LIBICP
-    % 5: ICP1
+    % 4: LIBICP        (fast, mex   )
+    % 5: ICP1          (Slow, matlab)
     % 6: Chamfer
 
-    algo = 6;
+    algo = 4;
 
 
     % Set up paths
@@ -37,6 +37,7 @@ function mattest( jobID, taskID )
       mkdir(OutPath);
       copyfile('SLAM.m'   , OutPath)
       copyfile('mattest.m', OutPath)
+      copyfile('chamfer/chamferMatch.m', OutPath)
     end
 
     % Add task prefix to each file
@@ -82,7 +83,8 @@ function mattest( jobID, taskID )
         case 7 %7
             % Night with Natalie #1 (EERC DOW DIL)
             DatasetName = '2015-04-17-00-44-23';  
-            start       = 15200;         
+            start       = 15200;      
+            stop        = 58000;   
         case 2 %8
             % Night with Natalie #2 (EERC 8F)
             DatasetName = '2015-04-17-01-30-48';  

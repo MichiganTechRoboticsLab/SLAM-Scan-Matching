@@ -1,4 +1,4 @@
-function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
+function [ T, bestHits] = chamferMatch( T, scan, map, ogrid, Dmap, varargin)
 %CHAMFERMATCH Chamfer distance based scan-matching
 %   Detailed explanation goes here
 
@@ -21,31 +21,7 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
     
     UseChamfer = true;
     
-    % Generate Occupancy Grid
-    if verbose
-        lookupTableTic = tic;
-    end
     
-    ogrid = oGrid(map, pixelSize);
-    
-    if verbose
-        fprintf('Chamfer: oGrid generation took %.4f seconds. \n', toc(lookupTableTic))
-    end
-    
-    
-    % Generate chamfer distance map    
-    if verbose
-        lookupTableTic = tic;
-    end;
-    
-    if UseChamfer
-        [Dmap, ~] = bwdist(ogrid.grid);
-    end
-    
-    if verbose
-        fprintf('Chamfer: DistMap generation took %.4f seconds. \n', toc(lookupTableTic))
-        searchTic = tic;
-    end
     
     % Search Results
     if UseChamfer
@@ -57,7 +33,7 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
        
     
     % Exhausitve search
-    if 1
+    if 0
         t = SearchLin * ceil(dLinear/SearchLin);
         r = SearchRot * ceil(dTheta /SearchRot);
 
@@ -78,10 +54,10 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
                     % Translate points and convert to pixel coords
                     Sx0 = (S(:,1) + (x - ogrid.minX)) / tmpX ;
                     Sy0 = (S(:,2) + (y - ogrid.minY)) / tmpY ;
-
+                    
                     Sx1 = round(Sx0);  
                     Sy1 = round(Sy0);
-
+                    
                     % Bounds Checking
                     I = (Sx1 > 1) & ...
                         (Sy1 > 1) & ...
@@ -89,17 +65,16 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
                         (Sy1 < size(ogrid.grid, 2)) ;
                     Sx2 = Sx1(I);
                     Sy2 = Sy1(I);
-
+                    
+                    
                     % Fitness
-                    %ind   = sub2ind(size(ogrid.grid), Sx2, Sy2);
-
                     siz = size(ogrid.grid);
                     ind = Sx2 + (Sy2 - 1).*siz(1);
 
-
                     if UseChamfer
-                        hits  = (Dmap(ind) <= 0); % & (Dmap(ind) > 10);
-                        score = sum(Dmap(ind));
+                        D = Dmap(ind);
+                        hits  = (D == 0);
+                        score = sum(D);
                     else
                         hits  = ogrid.grid(ind);
                         score = sum(hits);
@@ -107,13 +82,13 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
 
                     % Keep best score
                     if UseChamfer
-                        if score < bestScore(end)
+                        if score < bestScore
                             Tbest     = [x y theta];
                             bestScore = score;  
                             bestHits  = hits;                          
                         end
                     else
-                        if score > bestScore(end)
+                        if score > bestScore
                             Tbest     = [x y theta];
                             bestScore = score;  
                             bestHits  = hits;                          
@@ -161,14 +136,14 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
                         Sx2 = Sx1(~I);
                         Sy2 = Sy1(~I);
 
-                        % Fitness
+                        % Fitness function
                         siz = size(ogrid.grid);
-                        ind = Sx2 + (Sy2 - 1).*siz(1);                    
-                                               
+                        ind = Sx2 + (Sy2 - 1).*siz(1);   
                             
                         if UseChamfer
-                            hits  = Dmap(ind) <= 1;
-                            score = sum(Dmap(ind));
+                            D = Dmap(ind);
+                            hits  = (D == 0);
+                            score = sum(D);
                         else 
                             hits  = ogrid.grid(ind);
                             score = sum(hits);
@@ -176,13 +151,13 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
 
                         % Keep best score
                         if UseChamfer
-                            if score < bestScore(end)
+                            if score < bestScore
                                 Tbest     = [x y theta];
                                 bestScore = score;  
                                 bestHits  = hits;                          
                             end
                         else
-                            if score > bestScore(end)
+                            if score > bestScore
                                 Tbest     = [x y theta];
                                 bestScore = score;  
                                 bestHits  = hits;                          
@@ -204,14 +179,25 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
     
     % Decent walk
     if 1
-    %    t = SearchLin;
-    %    r = SearchRot;
+        t = SearchLin;
+        r = SearchRot;
+        
+        if UseChamfer
+          grid = Dmap;
+        else
+          grid = ogrid.grid; 
+        end
+        
+        siz = size(ogrid.grid);
+        tmpX = ((ogrid.maxX - ogrid.minX + ogrid.pixelSize) / siz(1));
+        tmpY = ((ogrid.maxY - ogrid.minY + ogrid.pixelSize) / siz(2));
 
-        t = SearchLin/2;
-        r = SearchRot/2;
 
+
+
+        dmax = 0;
         imax = 0;
-        while imax < 5
+        while imax < 30 %&& (t > 0.02 | r > deg2rad(0.2))
 
             for theta = ([-r 0 r]) + T(1,3)
 
@@ -224,55 +210,44 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
                 for x = ([-t 0 t]) + T(1,1)
                     for y = ([-t 0 t]) + T(1,2)
 
-                        % Convert to pixel coords
-                        Sx0 = (S(:,1) + (x - ogrid.minX)) / (ogrid.maxX - ogrid.minX + ogrid.pixelSize) * size(ogrid.grid, 1);
-                        Sy0 = (S(:,2) + (y - ogrid.minY)) / (ogrid.maxY - ogrid.minY + ogrid.pixelSize) * size(ogrid.grid, 2);
-
-                        Sx1 = round(Sx0);  
-                        Sy1 = round(Sy0);
+                    % Translate points and convert to pixel coords                    
+                    Sx1 = round((S(:,1) + (x - ogrid.minX)) / tmpX );  
+                    Sy1 = round((S(:,2) + (y - ogrid.minY)) / tmpY );
+                    
 
                         % Bounds Checking
-                        I = (Sx1 < 1) | ...
-                            (Sy1 < 1) | ...
-                            (Sx1 > size(ogrid.grid, 1)) | ...
-                            (Sy1 > size(ogrid.grid, 2)) ;
-                        Sx2 = Sx1(~I);
-                        Sy2 = Sy1(~I);
+                        I = (Sx1 > 1) & ...
+                            (Sy1 > 1) & ...
+                            (Sx1 < siz(1)) & ...
+                            (Sy1 < siz(2)) ;
+                        Sx2 = Sx1(I);
+                        Sy2 = Sy1(I);
 
                         % Fitness
-                        siz = size(ogrid.grid);
                         ind = Sx2 + (Sy2 - 1).*siz(1);                    
                                                
-                        if UseChamfer
-                            hits  = Dmap(ind) <= 1;
-                            score = sum(Dmap(ind));
-                        else 
-                            hits  = ogrid.grid(ind);
-                            score = sum(hits);
-                        end
+                        hits  = grid(ind);
+                        score = sum(hits);
+                        
 
                         % Keep best score
-                        if UseChamfer
-                            if score < bestScore(end)
-                                Tbest     = [x y theta];
-                                bestScore = score;  
-                                bestHits  = hits;                          
-                            end
-                        else
-                            if score > bestScore(end)
-                                Tbest     = [x y theta];
-                                bestScore = score;  
-                                bestHits  = hits;                          
-                            end
-                        end
-                   end 
+                        if score < bestScore
+                            Tbest     = [x y theta];
+                            bestScore = score;  
+                            bestHits  = hits;                          
+                        end       
+                    end 
                 end
             end
 
             if T == Tbest
-              r = r/2;
-              t = t/2;
-              %break;
+                r = r/2;
+                t = t/2;
+                
+                dmax = dmax + 1;
+                if dmax > 3
+                    break
+                end
             end
 
             % Init Next Iteration
@@ -281,10 +256,6 @@ function [ T, bestHits ] = chamferMatch( T, scan, map, varargin)
         end
     end
     
-    
-    
-    if verbose
-        fprintf('Chamfer: Search took %.4f seconds. \n', toc(searchTic))
-    end
+    bestHits = (bestHits == 0);
 end
 

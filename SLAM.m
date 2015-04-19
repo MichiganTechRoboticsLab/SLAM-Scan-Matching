@@ -24,7 +24,7 @@ MaxAccelLin          = 0.5;          % (Meters  / second^2 )
 MaxAccelRot          = deg2rad(60);  % (Radians / second^2 )
 
 MapBorderSize        = 1;            % (Meters )
-MapPixelSize         = 0.025;         % (Meters )
+MapPixelSize         = 0.05;         % (Meters )
 
 SearchResolutionLin  = 0.05; % (Meters )
 SearchResolutionRot  = deg2rad(0.5); % (Radians )
@@ -52,7 +52,7 @@ T          = [0 0 0];
 init_guess = [0 0 0];
 LastMapUpdatePose = [0 0 0];
 SearchRange = [];
-UpdateMap  = true;
+WorldUpdated = true;
 
 
 % Clear all figures before running
@@ -126,27 +126,28 @@ for scanIdx = start:step:stopIdx
     
     
     % Generate a local map from the world map
-    if useScan2World && UpdateMap
+    if useScan2World
         
-        % Translate current scan to map coordinates
-        dx    = init_guess(1);
-        dy    = init_guess(2);
-        theta = init_guess(3);
-        
-        M = [ cos(theta) -sin(theta) dx ;
-              sin(theta)  cos(theta) dy ;
-              0           0          1  ];
-        
-        scanWorldFrame = [scan ones(size(scan,1), 1)];
-        scanWorldFrame = scanWorldFrame * M';
-        scanWorldFrame = scanWorldFrame(:,[1,2]);
-        
-        % extract points around the current scan for a reference map
-        map = map(map(:,1) > min(scanWorldFrame(:,1)) - MapBorderSize, :);
-        map = map(map(:,1) < max(scanWorldFrame(:,1)) + MapBorderSize, :);
-        map = map(map(:,2) > min(scanWorldFrame(:,2)) - MapBorderSize, :);
-        map = map(map(:,2) < max(scanWorldFrame(:,2)) + MapBorderSize, :);
-        
+        if WorldUpdated
+          % Translate current scan to map coordinates
+          dx    = init_guess(1);
+          dy    = init_guess(2);
+          theta = init_guess(3);
+          
+          M = [ cos(theta) -sin(theta) dx ;
+                sin(theta)  cos(theta) dy ;
+                0           0          1  ];
+          
+          scanWorldFrame = [scan ones(size(scan,1), 1)];
+          scanWorldFrame = scanWorldFrame * M';
+          scanWorldFrame = scanWorldFrame(:,[1,2]);
+          
+          % extract points around the current scan for a reference map
+          map = map(map(:,1) > min(scanWorldFrame(:,1)) - MapBorderSize, :);
+          map = map(map(:,1) < max(scanWorldFrame(:,1)) + MapBorderSize, :);
+          map = map(map(:,2) > min(scanWorldFrame(:,2)) - MapBorderSize, :);
+          map = map(map(:,2) < max(scanWorldFrame(:,2)) + MapBorderSize, :);
+        end
     end
     
     
@@ -274,7 +275,15 @@ for scanIdx = start:step:stopIdx
             
         case 6 % ChamferSLAM
  
-            [T, hits] = chamferMatch(T, scan, map,               ...
+            if WorldUpdated
+                 % Generate Occupancy Grid  
+                ogrid = oGrid(map, MapPixelSize);
+                
+                % Generate chamfer distance map    
+                Dmap  = bwdist(ogrid.grid);
+            end
+ 
+            [T, hits] = chamferMatch(T, scan, map, ogrid, Dmap,   ...
                                       'dTheta'    , rmax,         ...
                                       'dLinear'   , tmax,         ...
                                       'pixelSize' , MapPixelSize, ...
@@ -284,18 +293,7 @@ for scanIdx = start:step:stopIdx
             score  = sum(hits);
              
     end
-    
-    if verbose
-        fprintf('ScanMatcher:     Match took %.4f seconds. \n', toc(ScanMatch))
-        ScanPostMatch = tic;
-    end
-    
-    
-    
-    
-    
-    
-    
+        
     
     % Update current pose
     if useScan2World
@@ -313,7 +311,24 @@ for scanIdx = start:step:stopIdx
         % Add previous scan to pose
         pose = pose + [mapT(1:2)', T(3)];
     end
-
+%     if(useSimWorld)
+%         fprintf('ScanMatcher: Scan %d pose is ', scanIdx);
+%         tmp = pose;
+%         tmp(3) = rad2deg(tmp(3));
+%         fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g]\n'], tmp')
+%     
+%         goodPose = LidarPose(scanIdx,1:3);
+%         tmp = goodPose;
+%         tmp(3) = rad2deg(tmp(3));
+%         fprintf('ScanMatcher: Scan %d pose should be ', scanIdx);
+%         fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
+%         poseErr = goodPose - pose;
+%         tmp = poseErr;
+%         tmp(3) = rad2deg(tmp(3));
+%         fprintf('ScanMatcher: Scan %d pose err: ', scanIdx);
+%         fprintf(['[ ' repmat('%g ', 1, size(tmp, 2)-1) '%g ]\n'], tmp')
+%         
+%     end
     path(end+1,:) = pose;
     
     % Make Sure Scan in proper Coordinates
@@ -356,10 +371,9 @@ for scanIdx = start:step:stopIdx
         
         % Update map after distance traveled. 
         dp = abs(LastMapUpdatePose - path(end, :));
-        UpdateMap = (dp(1) > UpdateMapDT) || ...
-                    (dp(2) > UpdateMapDT) || ... 
-                    (dp(3) > UpdateMapDR);
-        if UpdateMap
+        if (dp(1) > UpdateMapDT) || ...
+           (dp(2) > UpdateMapDT) || ... 
+           (dp(3) > UpdateMapDR)
            LastMapUpdatePose = path(end, :);
                 
             % Only add new points to the map 
@@ -371,6 +385,10 @@ for scanIdx = start:step:stopIdx
               newpts = tempL(:, 1:2);  
               world = [world; newpts];              
             end
+            
+            WorldUpdated = true;
+        else
+            WorldUpdated = false;
         end
         
         % Update when new hits are detected
@@ -446,10 +464,11 @@ for scanIdx = start:step:stopIdx
     
     % Select the map for the next scan
     if useScan2World
+    
+        if WorldUpdated
+            map = world;
+        end
         
-        if UpdateMap
-          map = world;
-        end 
         %MaxMapSize = 100000;
         %sz = size(world, 1);
         %if sz > MaxMapSize            
@@ -494,9 +513,10 @@ for scanIdx = start:step:stopIdx
 end
 
 
-toc(startTime)
+exectime = toc(startTime);
 realTime = Lidar_Timestamp_Sensor(scanIdx) - Lidar_Timestamp_Sensor(start);
-fprintf('ScanMatcher: Logfile length %.4f seconds. \n', realTime)
+fprintf('ScanMatcher: %.2f / %.2f (exe/log) seconds = %0.4f \n', ...
+         exectime, realTime, exectime / realTime)
 
 
 
@@ -508,6 +528,8 @@ if size(world,1) > MaxMapSize
     I = randsample(size(world,1), MaxMapSize);
     %I = (size(map,1)-MaxMapSize):size(map,1);
     map = world(I,:);
+else
+    map = world;
 end
  
 change_current_figure(1);
